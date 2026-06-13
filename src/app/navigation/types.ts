@@ -17,6 +17,8 @@ export type MainTabsParamList = {
 
 export type RootStackParamList = {
   Splash: undefined;
+  Signup: undefined;
+  Login: undefined;
   Onboarding: undefined;
   MainTabs: NavigatorScreenParams<MainTabsParamList>;
   Lesson: { lessonId: string };

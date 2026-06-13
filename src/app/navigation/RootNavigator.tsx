@@ -9,6 +9,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from './types';
 import MainTabs from './MainTabs';
 import SplashScreen from '../../features/onboarding/screens/SplashScreen';
+import SignupScreen from '../../features/onboarding/screens/SignupScreen';
+import LoginScreen from '../../features/onboarding/screens/LoginScreen';
 import GoalSetupScreen from '../../features/onboarding/screens/GoalSetupScreen';
 import LessonScreen from '../../features/learn/screens/LessonScreen';
 import JargonBusterScreen from '../../features/learn/screens/JargonBusterScreen';
@@ -24,6 +26,8 @@ export default function RootNavigator() {
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Splash" component={SplashScreen} />
+        <Stack.Screen name="Signup" component={SignupScreen} />
+        <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Onboarding" component={GoalSetupScreen} />
         <Stack.Screen name="MainTabs" component={MainTabs} />
 

@@ -33,12 +33,12 @@ export default function SplashScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.footer}>
-          <Button label="शुरू करें — Start Free 🚀" variant="gradientAmber" onPress={() => navigation.navigate('Onboarding')} />
+          <Button label="शुरू करें — Start Free 🚀" variant="gradientAmber" onPress={() => navigation.navigate('Signup')} />
           <Button
             label="Already have an account? Log in"
             variant="outline"
             style={styles.loginBtn}
-            onPress={() => navigation.replace('MainTabs', { screen: 'Home' })}
+            onPress={() => navigation.navigate('Login')}
           />
           <Text style={styles.terms}>By continuing, you agree to our Terms & Privacy Policy</Text>
         </View>
