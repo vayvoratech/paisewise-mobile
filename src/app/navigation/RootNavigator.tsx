@@ -18,6 +18,10 @@ import QuizScreen from '../../features/quiz/screens/QuizScreen';
 import BuySellScreen from '../../features/practice/screens/BuySellScreen';
 import TradeSuccessScreen from '../../features/practice/screens/TradeSuccessScreen';
 import CommunityScreen from '../../features/community/screens/CommunityScreen';
+import ForgotPasswordScreen from '../../features/onboarding/screens/ForgotPasswordScreen';
+import VerifyOtpScreen from '../../features/onboarding/screens/VerifyOtpScreen';
+import ResetPasswordScreen from '../../features/onboarding/screens/ResetPasswordScreen';
+
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -28,6 +32,9 @@ export default function RootNavigator() {
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Signup" component={SignupScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} />
+        <Stack.Screen name="VerifyOtp" component={VerifyOtpScreen} />
+        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         <Stack.Screen name="Onboarding" component={GoalSetupScreen} />
         <Stack.Screen name="MainTabs" component={MainTabs} />
 

@@ -19,6 +19,9 @@ export type RootStackParamList = {
   Splash: undefined;
   Signup: undefined;
   Login: undefined;
+  ForgotPasswordScreen: undefined;
+  VerifyOtp: { email: string }; 
+  ResetPassword: { email: string };
   Onboarding: undefined;
   MainTabs: NavigatorScreenParams<MainTabsParamList>;
   Lesson: { lessonId: string };
