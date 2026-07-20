@@ -1,42 +1,46 @@
 /**
  * PaiseWise design tokens, derived from the provided screens.
- *
- * The app mixes a dark navy "hero" backdrop (top of most screens) with light
- * card sheets that slide up from the bottom. Accent is a warm amber/orange;
- * gains are teal-green, losses are red/pink. Tokens here are the single source
- * of truth so the whole app restyles from one place.
  */
-export const colors = {
+export interface ColorPalette {
+  bg: string;
+  amber: string;
+  amberBright: string;
+  purple: string;
+  greenBright: string;
+  // ... add any other colors you use in Button.tsx
+  [key: string]: string; // This acts as a safety valve
+}
+export const colors: ColorPalette = {
   // Dark hero backdrop
   bg: '#0E0F1A',
   bgDeep: '#080912',
-  navy: '#1E1B4B', // purple-navy used behind hero sections
+  navy: '#1E1B4B', 
   navyGradientTop: '#26224F',
   navyGradientBottom: '#14152A',
 
   // Light card surfaces
   surface: '#FFFFFF',
-  surfaceAlt: '#F4F3EF', // warm off-white sheet background
+  surfaceAlt: '#F4F3EF', 
   surfaceMuted: '#F1F0F8',
 
   // Text
-  text: '#0F172A', // on light
+  text: '#0F172A', 
   textOnDark: '#FFFFFF',
-  textMuted: '#64748B', // on light
-  textMutedDark: '#8B8FA3', // on dark
+  textMuted: '#64748B', 
+  textMutedDark: '#8B8FA3', 
   textFaint: '#475063',
 
   // Brand accents
-  amber: '#F59E0B',
-  amberBright: '#FB923C',
+  amber: '#D97706',       // Updated for Button.tsx
+  amberBright: '#FBBF24', // Updated for Button.tsx
   orange: '#F97316',
-  purple: '#6D5DF6',
+  purple: '#8B5CF6',      // Updated for Button.tsx
   purpleDeep: '#5B21B6',
   indigoChip: '#EEF0FF',
 
   // Semantic — gains / losses
   green: '#10B981',
-  greenBright: '#2DE3A4', // "Trade Successful" mint
+  greenBright: '#34D399', // Updated for Button.tsx
   greenSoft: '#D6F5E8',
   red: '#EF4444',
   pink: '#F43F5E',
@@ -45,7 +49,7 @@ export const colors = {
   // Misc
   border: '#E2E8F0',
   borderDark: '#2A2C42',
-  yellowCard: '#FEF6E0', // "Why up today" callout
+  yellowCard: '#FEF6E0', 
   yellowBorder: '#F6E2A8',
   star: '#FFC83D',
   white: '#FFFFFF',

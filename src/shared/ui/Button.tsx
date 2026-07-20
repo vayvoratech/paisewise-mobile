@@ -1,7 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, radius, spacing, typography } from '../../core/theme/theme';
+import { colors, radius, spacing, typography } from '../../core/theme/theme'; 
 
 type Variant = 'primary' | 'gradientAmber' | 'gradientPurple' | 'success' | 'dark' | 'outline';
 

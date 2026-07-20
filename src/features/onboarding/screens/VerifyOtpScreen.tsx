@@ -24,6 +24,7 @@ export default function VerifyOtpScreen({ route, navigation }: { route: any, nav
   const { email } = route.params;
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isOtpFocused, setIsOtpFocused] = useState(false);
 
   const handleVerifyOtp = async () => {
     const payload = {
@@ -56,15 +57,19 @@ export default function VerifyOtpScreen({ route, navigation }: { route: any, nav
             <Text style={styles.subtitle}>Enter the code sent to {email}</Text>
 
             <View style={styles.field}>
-              <TextInput
-                style={styles.input}
-                placeholder="6-digit code"
-                placeholderTextColor={colors.textFaint}
-                keyboardType="numeric"
-                maxLength={6}
-                value={otp}
-                onChangeText={setOtp}
-              />
+              <View style={[styles.inputWrapper, isOtpFocused && styles.inputWrapperFocused]}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="6-digit code"
+                  placeholderTextColor={colors.textFaint}
+                  keyboardType="numeric"
+                  maxLength={6}
+                  value={otp}
+                  onChangeText={setOtp}
+                  onFocus={() => setIsOtpFocused(true)}
+                  onBlur={() => setIsOtpFocused(false)}
+                />
+              </View>
             </View>
 
             <Button
@@ -86,14 +91,27 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.textOnDark, textAlign: 'center', marginBottom: spacing.sm },
   subtitle: { ...typography.body, color: colors.textMutedDark, textAlign: 'center', marginBottom: spacing.xxl },
   field: { marginBottom: spacing.lg },
-  input: {
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderColor: colors.borderDark,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderRadius: radius.md,
+    overflow: 'hidden',
+  },
+  inputWrapperFocused: {
+    borderColor: colors.textOnDark,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  input: {
+    flex: 1,
     padding: spacing.lg,
     color: colors.textOnDark,
     fontSize: 16,
     textAlign: 'center',
+    // @ts-ignore - web-only property, RN Web draws a native focus ring otherwise
+    outlineStyle: 'none',
+    outlineWidth: 0,
   },
 });

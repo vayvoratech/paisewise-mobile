@@ -1,4 +1,3 @@
-/** Login — phone + password. On success, goes straight to the main tabs. */
 import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -22,6 +21,7 @@ import {
 } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -32,127 +32,105 @@ export default function LoginScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Focus states
+  const [isPhoneFocused, setIsPhoneFocused] = useState(false);
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+
   const onSubmit = async () => {
     setError(null);
-
-    if (!/^\d{10}$/.test(phone.trim())) {
-      return setError('Enter a valid 10-digit phone number.');
-    }
-
-    if (password.length < 4) {
-      return setError('Enter your password.');
-    }
+    if (!/^\d{10}$/.test(phone.trim())) return setError('Enter a valid 10-digit phone number.');
+    if (password.length < 4) return setError('Enter your password.');
 
     setLoading(true);
 
-    // TODO: call auth-service /auth/login via the API client (mock for now).
-    setTimeout(() => {
+    try {
+      // Matches LoginRequest DTO: phone, password
+      const payload = { phone: phone.trim(), password };
+
+      const url = 'http://192.168.29.14:8080/auth/login';
+      const response = await axios.post(url, payload);
+
+      // AuthResponse: { user: { id, name, phone }, tokens: { accessToken, refreshToken } }
+      const { user, tokens } = response.data;
+
+      // TODO: persist tokens/user (e.g. AsyncStorage or your existing auth store)
+      // so the app stays logged in and can attach the accessToken to future requests.
+      console.log('Login success:', user, tokens);
+
       setLoading(false);
       navigation.replace('MainTabs', { screen: 'Home' });
-    }, 600);
+    } catch (err: any) {
+      setLoading(false);
+
+      if (err.response) {
+        console.error('Login API Error:', err.response.status, err.response.data);
+        const status = err.response.status;
+
+        if (status === 401 || status === 400 || status === 403 || status === 404) {
+          // Wrong phone number or wrong password — backend now returns 401
+          // for both cases (ResponseStatusException in AuthService.login),
+          // so we don't leak which part of the credentials was wrong.
+          setError('Your phone number or password is incorrect. Please enter valid credentials.');
+        } else if (err.response.data?.message) {
+          setError(err.response.data.message);
+        } else {
+          setError('Could not log in right now. Please try again.');
+        }
+      } else {
+        console.error('Login Connection Error:', err.message);
+        setError('Could not reach the server. Please try again later.');
+      }
+    }
   };
 
   return (
     <HeroBackground tone="navy">
       <SafeAreaView style={styles.safe}>
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <ScrollView
-            contentContainerStyle={styles.scroll}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Text style={styles.back}>← Back</Text>
-            </TouchableOpacity>
-
-            <View style={styles.logo}>
-              <Text style={styles.logoEmoji}>🏛️</Text>
-            </View>
-
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+            <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>← Back</Text></TouchableOpacity>
+            <View style={styles.logo}><Text style={styles.logoEmoji}>🏛️</Text></View>
             <Text style={styles.title}>Welcome back 👋</Text>
+            {/* <Text style={styles.subtitle}>Log in to continue learning</Text> */}
 
-            <Text style={styles.subtitle}>
-              Log in to continue learning
-            </Text>
-
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Phone number</Text>
-
+            <Text style={styles.fieldLabel}>Phone number</Text>
+            <View style={[styles.inputWrapper, isPhoneFocused && styles.inputWrapperFocused]}>
               <TextInput
                 style={styles.input}
                 placeholder="10-digit mobile"
                 placeholderTextColor={colors.textFaint}
                 keyboardType="phone-pad"
                 maxLength={10}
-                autoCapitalize="none"
                 value={phone}
                 onChangeText={setPhone}
+                onFocus={() => setIsPhoneFocused(true)}
+                onBlur={() => setIsPhoneFocused(false)}
               />
             </View>
 
-           <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Password</Text>
-
-             <View style={styles.passwordContainer}>
+            <Text style={styles.fieldLabel}>Password</Text>
+            <View style={[styles.inputWrapper, isPasswordFocused && styles.inputWrapperFocused]}>
               <TextInput
-                 style={styles.passwordInput}
-                 placeholder="Your password"
-                 placeholderTextColor={colors.textFaint}
-                 secureTextEntry={!showPassword}
-                 value={password}
+                style={styles.input}
+                placeholder="Your password"
+                placeholderTextColor={colors.textFaint}
+                secureTextEntry={showPassword}
+                value={password}
                 onChangeText={setPassword}
-               />
-
-          <TouchableOpacity
-              onPress={() => setShowPassword(!showPassword)}
-            >
-            <Ionicons
-              name={showPassword ? 'eye-off' : 'eye'}
-              size={22}
-             color={colors.textMutedDark}
-             />
-           </TouchableOpacity>
+                onFocus={() => setIsPasswordFocused(true)}
+                onBlur={() => setIsPasswordFocused(false)}
+              />
+              <TouchableOpacity style={styles.icon} onPress={() => setShowPassword(!showPassword)}>
+                <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={22} color={colors.textMutedDark} />
+              </TouchableOpacity>
             </View>
-         </View>
 
-            {/* Forgot Password */}
-            <TouchableOpacity
-              style={styles.forgotPassword}
-              onPress={() => {
-                navigation.navigate('ForgotPasswordScreen');
-              }}
-            >
-              <Text style={styles.forgotPasswordText}>
-                Forgot Password?
-              </Text>
+            <TouchableOpacity style={styles.forgotPassword} onPress={() => navigation.navigate('ForgotPasswordScreen')}>
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
             </TouchableOpacity>
 
-            {error ? (
-              <Text style={styles.error}>{error}</Text>
-            ) : null}
-
-            <Button
-              label="Log in"
-              variant="gradientAmber"
-              loading={loading}
-              onPress={onSubmit}
-              style={{ marginTop: spacing.lg }}
-            />
-
-            <TouchableOpacity
-              style={styles.switchRow}
-              onPress={() => navigation.replace('Signup')}
-            >
-              <Text style={styles.switchText}>
-                New here?{' '}
-                <Text style={styles.switchLink}>
-                  Create an account
-                </Text>
-              </Text>
-            </TouchableOpacity>
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+            <Button label="Log in" variant="gradientAmber" loading={loading} onPress={onSubmit} />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -161,118 +139,38 @@ export default function LoginScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-  },
-
-  scroll: {
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xl,
-    flexGrow: 1,
-  },
-
-  back: {
-    ...typography.body,
-    color: colors.textMutedDark,
-    marginBottom: spacing.lg,
-  },
-
-  logo: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    backgroundColor: colors.orange,
+  safe: { flex: 1, paddingHorizontal: spacing.xl },
+  scroll: { flexGrow: 1, justifyContent: 'center' },
+  back: { ...typography.body, color: colors.textMutedDark, marginBottom: spacing.lg },
+  logo: { width: 72, height: 72, borderRadius: 20, backgroundColor: colors.orange, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: spacing.lg },
+  logoEmoji: { fontSize: 36 },
+  title: { ...typography.h1, color: colors.textOnDark, textAlign: 'center', marginBottom: spacing.xxl },
+  fieldLabel: { ...typography.caption, color: colors.textMutedDark, marginBottom: spacing.sm },
+  inputWrapper: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    marginTop: spacing.xxl,
-  },
-
-  logoEmoji: {
-    fontSize: 36,
-  },
-
-  title: {
-    ...typography.h1,
-    color: colors.textOnDark,
-    textAlign: 'center',
-    marginTop: spacing.lg,
-  },
-
-  subtitle: {
-    ...typography.body,
-    color: colors.textMutedDark,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-    marginBottom: spacing.xl,
-  },
-
-  field: {
-    marginBottom: spacing.lg,
-  },
-
-  fieldLabel: {
-    ...typography.caption,
-    color: colors.textMutedDark,
-    marginBottom: spacing.sm,
-  },
-
-  input: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: colors.borderDark,
-    borderRadius: radius.md,
-    padding: spacing.lg,
-    fontSize: 16,
-    color: colors.textOnDark,
-  },
-
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginTop: -8,
     marginBottom: spacing.md,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderColor: colors.borderDark,
+    borderWidth: 1.5,
+    borderRadius: radius.md,
+    overflow: 'hidden',
   },
-
-  forgotPasswordText: {
-    color: colors.amber,
-    fontWeight: '700',
+  inputWrapperFocused: {
+    borderColor: colors.textOnDark,
+    backgroundColor: 'rgba(255,255,255,0.10)',
   },
-
-  error: {
-    color: colors.pink,
-    marginTop: spacing.xs,
+  input: {
+    flex: 1,
+    padding: spacing.lg,
+    color: colors.textOnDark,
+    fontSize: 16,
+    // @ts-ignore - web-only property, RN Web draws a native focus ring otherwise
+    outlineStyle: 'none',
+    outlineWidth: 0,
   },
-
-  switchRow: {
-    alignItems: 'center',
-    marginTop: spacing.xl,
-  },
-
-  switchText: {
-    ...typography.body,
-    color: colors.textMutedDark,
-  },
-
-  switchLink: {
-    color: colors.amber,
-    fontWeight: '700',
-  },
-
-  passwordContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  backgroundColor: 'rgba(255,255,255,0.06)',
-  borderColor: colors.borderDark,
-  borderWidth: 1,
-  borderRadius: radius.md,
-  paddingHorizontal: spacing.lg,
-},
-
-passwordInput: {
-  flex: 1,
-  color: colors.textOnDark,
-  fontSize: 16,
-  paddingVertical: spacing.lg,
-},
+  icon: { position: 'absolute', right: spacing.md },
+  forgotPassword: { alignSelf: 'flex-end', marginTop: -8, marginBottom: spacing.md },
+  forgotPasswordText: { color: colors.amber, fontWeight: '700' },
+  error: { color: colors.pink, marginBottom: spacing.md },
 });

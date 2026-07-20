@@ -11,9 +11,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-// CHANGE: Adjusted import path. Ensure this path points to your actual types file
-
-
 import { HeroBackground } from '../../../shared/ui/HeroBackground';
 import { Button } from '../../../shared/ui/Button';
 import {
@@ -30,10 +27,11 @@ type ForgotPasswordScreenProp = NativeStackNavigationProp<RootStackParamList, 'F
 export default function ForgotPasswordScreen({ navigation }: { navigation: ForgotPasswordScreenProp }) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isEmailFocused, setIsEmailFocused] = useState(false);
 
   const onSendOtp = async () => {
     const url = 'http://192.168.29.14:8080/auth/forgot-password';
-    
+
     try {
         const payload = { email: email.trim() };
         await axios.post(url, payload);
@@ -72,15 +70,19 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Forgo
 
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your email"
-                placeholderTextColor={colors.textFaint}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
-              />
+              <View style={[styles.inputWrapper, isEmailFocused && styles.inputWrapperFocused]}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your email"
+                  placeholderTextColor={colors.textFaint}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  value={email}
+                  onChangeText={setEmail}
+                  onFocus={() => setIsEmailFocused(true)}
+                  onBlur={() => setIsEmailFocused(false)}
+                />
+              </View>
             </View>
 
             {error && (
@@ -107,14 +109,27 @@ const styles = StyleSheet.create({
   subtitle: { ...typography.body, color: colors.textMutedDark, textAlign: 'center', marginBottom: spacing.xxl },
   field: { marginBottom: spacing.lg },
   fieldLabel: { ...typography.caption, color: colors.textMutedDark, marginBottom: spacing.sm },
-  input: {
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderColor: colors.borderDark,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderRadius: radius.md,
+    overflow: 'hidden',
+  },
+  inputWrapperFocused: {
+    borderColor: colors.textOnDark,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  input: {
+    flex: 1,
     padding: spacing.lg,
     color: colors.textOnDark,
     fontSize: 16,
+    // @ts-ignore - web-only property, RN Web draws a native focus ring otherwise
+    outlineStyle: 'none',
+    outlineWidth: 0,
   },
   error: { color: colors.pink, marginBottom: spacing.md },
 });
