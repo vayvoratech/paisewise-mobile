@@ -44,7 +44,6 @@ export default function LoginScreen({ navigation }: Props) {
     setLoading(true);
 
     try {
-      // Matches LoginRequest DTO: phone, password
       const payload = { phone: phone.trim(), password };
 
       const url = 'http://192.168.29.14:8080/auth/login';
