@@ -35,7 +35,7 @@ export default function VerifyOtpScreen({ route, navigation }: { route: any, nav
     console.log("Sending Payload:", JSON.stringify(payload)); 
 
     try {
-        await axios.post('http://192.168.29.14:8080/auth/verify-otp', payload);
+        await axios.post('http://localhost:8080/auth/verify-otp', payload);
         navigation.navigate('ResetPassword', { email });
     } catch (err: any) {
         if (err.response) {

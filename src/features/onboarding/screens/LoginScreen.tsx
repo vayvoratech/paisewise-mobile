@@ -46,7 +46,7 @@ export default function LoginScreen({ navigation }: Props) {
     try {
       const payload = { phone: phone.trim(), password };
 
-      const url = 'http://192.168.29.14:8080/auth/login';
+      const url = 'http://localhost:8080/auth/login';
       const response = await axios.post(url, payload);
 
       // AuthResponse: { user: { id, name, phone }, tokens: { accessToken, refreshToken } }

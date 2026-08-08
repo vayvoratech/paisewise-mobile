@@ -93,7 +93,7 @@ export default function SignupScreen({ navigation }: Props) {
         confirmPassword,
       };
 
-      const url = 'http://192.168.29.14:8080/auth/register';
+      const url = 'http://localhost:8080/auth/register';
       await axios.post(url, payload);
 
       setLoading(false);
