@@ -1,17 +1,38 @@
 /** Screen 01 — Splash / Landing. Brand + primary CTA. */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useDispatch } from 'react-redux';
 import { HeroBackground } from '../../../shared/ui/HeroBackground';
 import { Button } from '../../../shared/ui/Button';
 import { Pill } from '../../../shared/ui/Pill';
 import { colors, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
+import { tokenStore } from '../../../core/security/secureStore';
+import { setTokens } from '../slices/authSlice';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 
 export default function SplashScreen({ navigation }: Props) {
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const accessToken = await tokenStore.getAccessToken();
+        const refreshToken = await tokenStore.getRefreshToken();
+        if (accessToken && refreshToken) {
+          dispatch(setTokens({ accessToken, refreshToken }));
+          navigation.replace('MainTabs', undefined as any);
+        }
+      } catch (err) {
+        console.warn('Failed to restore login session on startup:', err);
+      }
+    };
+    checkSession();
+  }, [dispatch, navigation]);
+
   return (
     <HeroBackground tone="navy">
       <SafeAreaView style={styles.safe}>
@@ -58,17 +79,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.xl,
-    shadowColor: colors.orange,
-    shadowOpacity: 0.6,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 0 },
   },
-  logoEmoji: { fontSize: 52 },
-  brand: { ...typography.hero, color: colors.textOnDark },
-  tagHi: { ...typography.body, color: colors.textMutedDark, marginTop: spacing.md },
-  tagEn: { ...typography.body, color: colors.textMutedDark, marginTop: spacing.xs },
-  pills: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.xxl },
-  footer: { paddingBottom: spacing.lg, gap: spacing.md },
-  loginBtn: {},
-  terms: { ...typography.caption, color: colors.textFaint, textAlign: 'center', marginTop: spacing.xs },
+  logoEmoji: { fontSize: 56 },
+  brand: { ...typography.h1, color: colors.textOnDark },
+  tagHi: { ...typography.h2, color: colors.textOnDark, marginTop: spacing.md, textAlign: 'center' },
+  tagEn: { ...typography.body, color: colors.textMutedDark, marginTop: spacing.sm, textAlign: 'center' },
+  pills: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xl },
+  footer: { paddingBottom: spacing.lg },
+  loginBtn: { marginTop: spacing.md },
+  terms: { ...typography.caption, color: colors.textMutedDark, marginTop: spacing.lg, textAlign: 'center' },
 });

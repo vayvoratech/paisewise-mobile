@@ -14,7 +14,8 @@ import { formatINR } from '../../../shared/format';
 import { MainTabsParamList, RootStackParamList } from '../../../app/navigation/types';
 import { marketService } from '../../market/market.service';
 import { Stock } from '../../market/market.types';
-import { usePracticeAccount } from '../../portfolio/PracticeAccountContext';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../../app/store';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabsParamList, 'Practice'>,
@@ -22,7 +23,10 @@ type Props = CompositeScreenProps<
 >;
 
 export default function PracticeScreen({ navigation }: Props) {
-  const { cash, invested, holdingsValue, starting } = usePracticeAccount();
+  const cash = useSelector((state: RootState) => state.portfolio.cash);
+  const invested = useSelector((state: RootState) => state.portfolio.invested);
+  const holdingsValue = useSelector((state: RootState) => state.portfolio.holdingsValue);
+  const starting = 100_000; // virtual ₹1L seed
   const [stocks, setStocks] = useState<Stock[]>([]);
   const profit = cash + holdingsValue - starting;
 

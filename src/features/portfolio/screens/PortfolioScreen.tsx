@@ -8,7 +8,8 @@ import { Pill } from '../../../shared/ui/Pill';
 import { Sparkline } from '../../../shared/ui/Sparkline';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { formatINR, formatPct } from '../../../shared/format';
-import { usePracticeAccount } from '../PracticeAccountContext';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../../app/store';
 
 const TABS = ['HOLDINGS', 'MUT. FUNDS', 'P&L REPORT'] as const;
 type Tab = (typeof TABS)[number];
@@ -16,7 +17,10 @@ type Tab = (typeof TABS)[number];
 const VALUE_SERIES = [98000, 99200, 98600, 100200, 101000, 100400, 102100, 103200, 103800, 104320];
 
 export default function PortfolioScreen() {
-  const { holdings, holdingsValue, cash, starting } = usePracticeAccount();
+  const holdings = useSelector((state: RootState) => state.portfolio.holdings);
+  const holdingsValue = useSelector((state: RootState) => state.portfolio.holdingsValue);
+  const cash = useSelector((state: RootState) => state.portfolio.cash);
+  const starting = 100_000;
   const [tab, setTab] = useState<Tab>('HOLDINGS');
   const totalValue = cash + holdingsValue;
   const gain = totalValue - starting;

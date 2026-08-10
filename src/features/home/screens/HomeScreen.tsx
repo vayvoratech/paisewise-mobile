@@ -14,7 +14,8 @@ import { formatINR, formatPct } from '../../../shared/format';
 import { MainTabsParamList, RootStackParamList } from '../../../app/navigation/types';
 import { PROFILE } from '../../profile/profile.data';
 import { TODAYS_LESSON } from '../../learn/learn.data';
-import { usePracticeAccount } from '../../portfolio/PracticeAccountContext';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../../app/store';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabsParamList, 'Home'>,
@@ -35,7 +36,7 @@ const QUICK_ACTIONS: { emoji: string; label: string; go: keyof MainTabsParamList
 ];
 
 export default function HomeScreen({ navigation }: Props) {
-  const { holdingsValue } = usePracticeAccount();
+  const holdingsValue = useSelector((state: RootState) => state.portfolio.holdingsValue);
   const gain = 4320;
   const gainPct = 4.3;
 

@@ -7,7 +7,8 @@ import { Button } from '../../../shared/ui/Button';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import { useDispatch } from 'react-redux';
+import { registerUser } from '../slices/authSlice';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Signup'>;
 
@@ -41,6 +42,7 @@ function validatePassword(pwd: string): string | null {
 }
 
 export default function SignupScreen({ navigation }: Props) {
+  const dispatch = useDispatch();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -93,29 +95,14 @@ export default function SignupScreen({ navigation }: Props) {
         confirmPassword,
       };
 
-      const url = 'http://localhost:8080/auth/register';
-      await axios.post(url, payload);
+      // Dispatch Redux thunk to register and save tokens
+      await dispatch(registerUser(payload) as any).unwrap();
 
       setLoading(false);
       navigation.replace('Onboarding');
     } catch (err: any) {
       setLoading(false);
-
-      if (err.response) {
-        // Backend validation errors (e.g. duplicate phone/email) come back as 400/409
-        console.error('Register API Error:', err.response.status, err.response.data);
-
-        if (err.response.status === 409) {
-          setError('An account with this phone or email already exists.');
-        } else if (err.response.data?.message) {
-          setError(err.response.data.message);
-        } else {
-          setError('Could not create account. Please check your details and try again.');
-        }
-      } else {
-        console.error('Register Connection Error:', err.message);
-        setError('Could not reach the server. Please try again later.');
-      }
+      setError(err || 'Could not create account. Please check your details and try again.');
     }
   };
 

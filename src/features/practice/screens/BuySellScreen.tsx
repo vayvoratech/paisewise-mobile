@@ -1,22 +1,28 @@
-/** Screen 06 — Buy / Sell Modal (bottom sheet). Order placement, practice money. */
+/** Screen 06 — Buy / Sell Modal (bottom sheet). Order placement, practice money.
+ *  State is now managed by Redux: portfolioSlice (cash/holdings) + orderSlice (order log).
+ */
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useDispatch, useSelector } from 'react-redux';
 import { Button } from '../../../shared/ui/Button';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { formatINR } from '../../../shared/format';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { marketService } from '../../market/market.service';
 import { Stock } from '../../market/market.types';
-import { usePracticeAccount } from '../../portfolio/PracticeAccountContext';
+import { buyStock } from '../../portfolio/slices/portfolioSlice';
+import { addLocalOrder } from '../slices/orderSlice';
+import type { RootState, AppDispatch } from '../../../app/store';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BuySell'>;
 type OrderType = 'MARKET' | 'LIMIT' | 'STOP LOSS';
 
 export default function BuySellScreen({ navigation, route }: Props) {
   const { symbol, mode } = route.params;
-  const { buy } = usePracticeAccount();
+  const dispatch = useDispatch<AppDispatch>();
+  const cash = useSelector((state: RootState) => state.portfolio.cash);
   const [stock, setStock] = useState<Stock | null>(null);
   const [orderType, setOrderType] = useState<OrderType>('MARKET');
   const [qty, setQty] = useState(5);
@@ -33,8 +39,31 @@ export default function BuySellScreen({ navigation, route }: Props) {
   const up = stock.changePct >= 0;
 
   const onConfirm = () => {
-    const result = buy(stock.symbol, stock.name, stock.emoji, qty, stock.price);
-    navigation.replace('TradeSuccess', result);
+    const totalPaid = Math.round(stock!.price * qty);
+    const xpEarned = 25;
+    // Dispatch to Redux portfolioSlice — updates cash, holdings, XP, invested, holdingsValue
+    dispatch(buyStock({
+      symbol: stock!.symbol,
+      name: stock!.name,
+      emoji: stock!.emoji,
+      shares: qty,
+      price: stock!.price,
+    }));
+    // Record in orderSlice order log
+    dispatch(addLocalOrder({
+      symbol: stock!.symbol,
+      shares: qty,
+      pricePerShare: stock!.price,
+      type: 'BUY',
+      timestamp: new Date().toISOString(),
+    }));
+    navigation.replace('TradeSuccess', {
+      symbol: stock!.symbol,
+      shares: qty,
+      pricePerShare: stock!.price,
+      totalPaid,
+      xpEarned,
+    });
   };
 
   return (

@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
+import { tokenStore } from '../../../core/security/secureStore';
 
 interface AuthState {
   user: any | null;
@@ -23,7 +24,11 @@ export const loginUser = createAsyncThunk(
   async (payload: any, { rejectWithValue }) => {
     try {
       const response = await axios.post(API_ENDPOINTS.AUTH.LOGIN, payload);
-      return response.data; // { user, tokens: { accessToken, refreshToken } }
+      const { tokens } = response.data;
+      if (tokens && tokens.accessToken && tokens.refreshToken) {
+        await tokenStore.setTokens(tokens.accessToken, tokens.refreshToken);
+      }
+      return response.data;
     } catch (err: any) {
       const errMsg = err.response?.data?.message || err.message || 'Login failed';
       return rejectWithValue(errMsg);
@@ -36,10 +41,29 @@ export const registerUser = createAsyncThunk(
   async (payload: any, { rejectWithValue }) => {
     try {
       const response = await axios.post(API_ENDPOINTS.AUTH.REGISTER, payload);
-      return response.data; // { user, tokens }
+      const { tokens } = response.data;
+      if (tokens && tokens.accessToken && tokens.refreshToken) {
+        await tokenStore.setTokens(tokens.accessToken, tokens.refreshToken);
+      }
+      return response.data;
     } catch (err: any) {
       const errMsg = err.response?.data?.message || err.message || 'Registration failed';
       return rejectWithValue(errMsg);
+    }
+  }
+);
+
+export const logoutUser = createAsyncThunk(
+  'auth/logout',
+  async (refreshToken: string | null, { rejectWithValue }) => {
+    try {
+      if (refreshToken) {
+        await axios.post(API_ENDPOINTS.AUTH.LOGOUT, { refreshToken });
+      }
+    } catch (err: any) {
+      console.warn('API logout failed:', err.message);
+    } finally {
+      await tokenStore.clear();
     }
   }
 );
@@ -53,6 +77,7 @@ const authSlice = createSlice({
       state.accessToken = null;
       state.refreshToken = null;
       state.error = null;
+      tokenStore.clear().catch(err => console.warn('Clear token store failed:', err));
     },
     setTokens(state, action: PayloadAction<{ accessToken: string; refreshToken: string }>) {
       state.accessToken = action.payload.accessToken;
@@ -90,6 +115,19 @@ const authSlice = createSlice({
       .addCase(registerUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      // Logout Thunk
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.user = null;
+        state.accessToken = null;
+        state.refreshToken = null;
+        state.error = null;
+      })
+      .addCase(logoutUser.rejected, (state) => {
+        state.user = null;
+        state.accessToken = null;
+        state.refreshToken = null;
+        state.error = null;
       });
   },
 });

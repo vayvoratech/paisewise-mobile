@@ -1,14 +1,54 @@
 /** Screen 12 — Profile & Settings. Badges, stats, preferences. */
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
 import { HeroBackground } from '../../../shared/ui/HeroBackground';
 import { Card } from '../../../shared/ui/Card';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { BADGES, PROFILE } from '../profile.data';
+import { logoutUser } from '../../onboarding/slices/authSlice';
+import { RootState } from '../../../app/store';
 
 export default function ProfileScreen() {
   const [reminders, setReminders] = useState(PROFILE.dailyReminders);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const dispatch = useDispatch();
+  const navigation = useNavigation<any>();
+  const refreshToken = useSelector((state: RootState) => state.auth.refreshToken);
+
+  const performLogout = async () => {
+    try {
+      await dispatch(logoutUser(refreshToken) as any).unwrap();
+    } catch (err) {
+      console.warn('API logout failed, clearing session anyway:', err);
+    } finally {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Splash' }],
+      });
+    }
+  };
+
+  const handleLogout = () => {
+    if (Platform.OS === 'web') {
+      setShowLogoutModal(true);
+    } else {
+      Alert.alert(
+        "Confirm Logout",
+        "Are you sure you want to log out?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Yes",
+            style: "destructive",
+            onPress: performLogout
+          }
+        ]
+      );
+    }
+  };
 
   return (
     <View style={styles.root}>
@@ -62,7 +102,44 @@ export default function ProfileScreen() {
           <Text style={styles.settingLabel}>KYC Status: Verified</Text>
           <View style={styles.kycBadge}><Text style={styles.kycCheck}>✓</Text></View>
         </View>
+
+        {/* Logout Button */}
+        <TouchableOpacity 
+          style={[styles.settingRow, styles.logoutButton]} 
+          activeOpacity={0.8}
+          onPress={handleLogout}
+        >
+          <Text style={styles.settingEmoji}>🚪</Text>
+          <Text style={[styles.settingLabel, styles.logoutText]}>Log Out</Text>
+        </TouchableOpacity>
       </ScrollView>
+
+      {showLogoutModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalEmoji}>🚪</Text>
+            <Text style={styles.modalTitle}>Confirm Logout</Text>
+            <Text style={styles.modalDescription}>Are you sure you want to log out?</Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalCancelButton]} 
+                onPress={() => setShowLogoutModal(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalConfirmButton]} 
+                onPress={() => {
+                  setShowLogoutModal(false);
+                  performLogout();
+                }}
+              >
+                <Text style={styles.modalConfirmText}>Yes, Log Out</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -118,4 +195,80 @@ const styles = StyleSheet.create({
   chevron: { fontSize: 24, color: colors.textMuted },
   kycBadge: { width: 30, height: 30, borderRadius: 15, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
   kycCheck: { color: colors.green, fontWeight: '800' },
+  logoutButton: {
+    borderColor: '#e53e3e',
+    borderWidth: 1,
+    backgroundColor: '#fff5f5'
+  },
+  logoutText: {
+    color: '#e53e3e'
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  modalContent: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    width: '90%',
+    maxWidth: 380,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalEmoji: {
+    fontSize: 48,
+    marginBottom: spacing.sm,
+  },
+  modalTitle: {
+    ...typography.h2,
+    color: colors.text,
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  modalDescription: {
+    ...typography.body,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalCancelText: {
+    ...typography.bodyBold,
+    color: colors.textMuted,
+  },
+  modalConfirmButton: {
+    backgroundColor: '#e53e3e',
+  },
+  modalConfirmText: {
+    ...typography.bodyBold,
+    color: colors.white,
+  }
 });
