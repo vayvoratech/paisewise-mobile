@@ -11,7 +11,7 @@ import MainTabs from './MainTabs';
 import SplashScreen from '../../features/onboarding/screens/SplashScreen';
 import SignupScreen from '../../features/onboarding/screens/SignupScreen';
 import LoginScreen from '../../features/onboarding/screens/LoginScreen';
-import GoalSetupScreen from '../../features/onboarding/screens/GoalSetupScreen';
+import OnboardingScreen from '../../features/onboarding/screens/OnboardingScreen';
 import LessonScreen from '../../features/learn/screens/LessonScreen';
 import JargonBusterScreen from '../../features/learn/screens/JargonBusterScreen';
 import QuizScreen from '../../features/quiz/screens/QuizScreen';
@@ -35,7 +35,7 @@ export default function RootNavigator() {
         <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} />
         <Stack.Screen name="VerifyOtp" component={VerifyOtpScreen} />
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-        <Stack.Screen name="Onboarding" component={GoalSetupScreen} />
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         <Stack.Screen name="MainTabs" component={MainTabs} />
 
         {/* Detail / pushed screens */}

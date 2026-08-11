@@ -9,6 +9,8 @@ interface AuthState {
   refreshToken: string | null;
   loading: boolean;
   error: string | null;
+  language: string;
+  goal: string;
 }
 
 const initialState: AuthState = {
@@ -17,6 +19,8 @@ const initialState: AuthState = {
   refreshToken: null,
   loading: false,
   error: null,
+  language: 'English',
+  goal: 'learn',
 };
 
 export const loginUser = createAsyncThunk(
@@ -83,6 +87,12 @@ const authSlice = createSlice({
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
     },
+    setLanguage(state, action: PayloadAction<string>) {
+      state.language = action.payload;
+    },
+    setGoal(state, action: PayloadAction<string>) {
+      state.goal = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -132,5 +142,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, setTokens } = authSlice.actions;
+export const { logout, setTokens, setLanguage, setGoal } = authSlice.actions;
 export default authSlice.reducer;

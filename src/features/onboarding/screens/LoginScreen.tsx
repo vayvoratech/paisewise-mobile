@@ -28,25 +28,28 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
   const dispatch = useDispatch();
-  const [phone, setPhone] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   // Focus states
-  const [isPhoneFocused, setIsPhoneFocused] = useState(false);
+  const [isIdentifierFocused, setIsIdentifierFocused] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
 
   const onSubmit = async () => {
     setError(null);
-    if (!/^\d{10}$/.test(phone.trim())) return setError('Enter a valid 10-digit phone number.');
+    const id = identifier.trim();
+    const isPhone = /^\d{10}$/.test(id);
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(id);
+    if (!isPhone && !isEmail) return setError('Enter a valid 10-digit phone number or email address.');
     if (password.length < 4) return setError('Enter your password.');
 
     setLoading(true);
 
     try {
-      const payload = { phone: phone.trim(), password };
+      const payload = { identifier: id, password };
 
       // Dispatch Redux thunk to log in and save tokens automatically
       await dispatch(loginUser(payload) as any).unwrap();
@@ -69,18 +72,18 @@ export default function LoginScreen({ navigation }: Props) {
             <Text style={styles.title}>Welcome back 👋</Text>
             {/* <Text style={styles.subtitle}>Log in to continue learning</Text> */}
 
-            <Text style={styles.fieldLabel}>Phone number</Text>
-            <View style={[styles.inputWrapper, isPhoneFocused && styles.inputWrapperFocused]}>
+            <Text style={styles.fieldLabel}>Phone number or Email</Text>
+            <View style={[styles.inputWrapper, isIdentifierFocused && styles.inputWrapperFocused]}>
               <TextInput
                 style={styles.input}
-                placeholder="10-digit mobile"
+                placeholder="Phone number or Email address"
                 placeholderTextColor={colors.textFaint}
-                keyboardType="phone-pad"
-                maxLength={10}
-                value={phone}
-                onChangeText={setPhone}
-                onFocus={() => setIsPhoneFocused(true)}
-                onBlur={() => setIsPhoneFocused(false)}
+                keyboardType="default"
+                autoCapitalize="none"
+                value={identifier}
+                onChangeText={setIdentifier}
+                onFocus={() => setIsIdentifierFocused(true)}
+                onBlur={() => setIsIdentifierFocused(false)}
               />
             </View>
 
