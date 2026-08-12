@@ -3,9 +3,12 @@
  * modal/detail screens (Lesson, Quiz, Jargon Buster, Buy/Sell, Trade Success,
  * Community) presented over the tabs.
  */
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useEffect } from 'react';
+import { AppState, Platform } from 'react-native';
+import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useSelector } from 'react-redux';
+
 import { RootStackParamList } from './types';
 import MainTabs from './MainTabs';
 import SplashScreen from '../../features/onboarding/screens/SplashScreen';
@@ -21,17 +24,84 @@ import CommunityScreen from '../../features/community/screens/CommunityScreen';
 import ForgotPasswordScreen from '../../features/onboarding/screens/ForgotPasswordScreen';
 import VerifyOtpScreen from '../../features/onboarding/screens/VerifyOtpScreen';
 import ResetPasswordScreen from '../../features/onboarding/screens/ResetPasswordScreen';
+import MpinLoginScreen from '../../features/onboarding/screens/MpinLoginScreen';
+import SetMpinScreen from '../../features/onboarding/screens/SetMpinScreen';
+import ResetMpinScreen from '../../features/onboarding/screens/ResetMpinScreen';
 
+import { RootState } from '../store';
+import { credentialsStore } from '../../core/security/secureStore';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+function AppLockManager({ navigationRef }: { navigationRef: any }) {
+  const accessToken = useSelector((state: RootState) => state.auth.accessToken);
+
+  useEffect(() => {
+    if (!accessToken) return;
+
+    const lockApp = async () => {
+      const currentRoute = navigationRef.getCurrentRoute();
+      if (!currentRoute) return;
+
+      const routeName = currentRoute.name;
+      // Do not lock if already on lock screen, or during initial signup/onboarding phases
+      if (
+        routeName === 'MpinLogin' ||
+        routeName === 'Splash' ||
+        routeName === 'Signup' ||
+        routeName === 'Login' ||
+        routeName === 'Onboarding' ||
+        routeName === 'SetMpin'
+      ) {
+        return;
+      }
+
+      const savedMpin = await credentialsStore.getMpin();
+      const savedPhone = await credentialsStore.getPhone();
+      if (savedMpin && savedPhone) {
+        navigationRef.navigate('MpinLogin', { phone: savedPhone, isUnlock: true });
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+          lockApp();
+        }
+      };
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
+    } else {
+      const handleAppStateChange = (nextAppState: string) => {
+        if (nextAppState === 'active') {
+          lockApp();
+        }
+      };
+      const subscription = AppState.addEventListener('change', handleAppStateChange);
+      return () => {
+        subscription.remove();
+      };
+    }
+  }, [accessToken, navigationRef]);
+
+  return null;
+}
+
 export default function RootNavigator() {
+  const navigationRef = useNavigationContainerRef();
+
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
+      <AppLockManager navigationRef={navigationRef} />
       <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Signup" component={SignupScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="MpinLogin" component={MpinLoginScreen} />
+        <Stack.Screen name="SetMpin" component={SetMpinScreen} />
+        <Stack.Screen name="ResetMpin" component={ResetMpinScreen} />
         <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} />
         <Stack.Screen name="VerifyOtp" component={VerifyOtpScreen} />
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />

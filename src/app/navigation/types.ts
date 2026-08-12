@@ -19,8 +19,11 @@ export type RootStackParamList = {
   Splash: undefined;
   Signup: undefined;
   Login: undefined;
-  ForgotPasswordScreen: undefined;
-  VerifyOtp: { email: string }; 
+  MpinLogin: { phone?: string; isUnlock?: boolean } | undefined;
+  SetMpin: undefined;
+  ResetMpin: { email: string; mode?: 'change' | 'forgot' };
+  ForgotPasswordScreen: { mode?: 'password' | 'mpin' } | undefined;
+  VerifyOtp: { email: string; mode?: 'password' | 'mpin' }; 
   ResetPassword: { email: string };
   Onboarding: undefined;
   MainTabs: NavigatorScreenParams<MainTabsParamList>;

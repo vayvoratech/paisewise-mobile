@@ -9,7 +9,7 @@ import { Button } from '../../../shared/ui/Button';
 import { Pill } from '../../../shared/ui/Pill';
 import { colors, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
-import { tokenStore } from '../../../core/security/secureStore';
+import { tokenStore, credentialsStore } from '../../../core/security/secureStore';
 import { setTokens } from '../slices/authSlice';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
@@ -22,9 +22,22 @@ export default function SplashScreen({ navigation }: Props) {
       try {
         const accessToken = await tokenStore.getAccessToken();
         const refreshToken = await tokenStore.getRefreshToken();
+        const savedPhone = await credentialsStore.getPhone();
+        const savedMpin = await credentialsStore.getMpin();
+
         if (accessToken && refreshToken) {
           dispatch(setTokens({ accessToken, refreshToken }));
-          navigation.replace('MainTabs', undefined as any);
+          if (savedPhone && savedMpin) {
+            navigation.replace('MpinLogin', { phone: savedPhone });
+          } else {
+            navigation.replace('MainTabs', undefined as any);
+          }
+          return;
+        }
+
+        // If no active session, check if returning user with configured MPIN
+        if (savedPhone && savedMpin) {
+          navigation.replace('MpinLogin', { phone: savedPhone });
         }
       } catch (err) {
         console.warn('Failed to restore login session on startup:', err);

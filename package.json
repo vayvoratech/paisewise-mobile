@@ -6,7 +6,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "e2e": "maestro test e2e/auth-flow.yaml"
   },
   "dependencies": {
     "@expo/metro-runtime": "~3.2.3",
@@ -18,6 +19,7 @@
     "axios": "^1.7.7",
     "expo": "~51.0.28",
     "expo-linear-gradient": "~13.0.2",
+    "expo-local-authentication": "^57.0.2",
     "expo-secure-store": "~13.0.2",
     "expo-status-bar": "~1.12.1",
     "react": "18.2.0",

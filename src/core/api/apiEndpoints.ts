@@ -1,6 +1,6 @@
 // /src/core/api/apiEndpoints.ts
 
-export const BASE_URL = 'http://localhost:8080';
+export const BASE_URL = 'http://192.168.1.36:8080';
 
 export const API_ENDPOINTS = {
   AUTH: {

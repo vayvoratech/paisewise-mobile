@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
-import { tokenStore } from '../../../core/security/secureStore';
+import { tokenStore, credentialsStore } from '../../../core/security/secureStore';
 
 interface AuthState {
   user: any | null;
@@ -28,13 +28,53 @@ export const loginUser = createAsyncThunk(
   async (payload: any, { rejectWithValue }) => {
     try {
       const response = await axios.post(API_ENDPOINTS.AUTH.LOGIN, payload);
-      const { tokens } = response.data;
+      const { tokens, user } = response.data;
       if (tokens && tokens.accessToken && tokens.refreshToken) {
         await tokenStore.setTokens(tokens.accessToken, tokens.refreshToken);
+      }
+      if (user && user.phone && user.email) {
+        await credentialsStore.saveCredentials(user.phone, user.email);
       }
       return response.data;
     } catch (err: any) {
       const errMsg = err.response?.data?.message || err.message || 'Login failed';
+      return rejectWithValue(errMsg);
+    }
+  }
+);
+
+export const loginUserMpin = createAsyncThunk(
+  'auth/loginMpin',
+  async (payload: { phone: string; mpin: string }, { rejectWithValue }) => {
+    try {
+      const response = await axios.post('http://192.168.1.36:8080/auth/login/mpin', payload);
+      const { tokens, user } = response.data;
+      if (tokens && tokens.accessToken && tokens.refreshToken) {
+        await tokenStore.setTokens(tokens.accessToken, tokens.refreshToken);
+      }
+      if (user && user.phone && user.email) {
+        await credentialsStore.saveCredentials(user.phone, user.email, payload.mpin);
+      }
+      return response.data;
+    } catch (err: any) {
+      const errMsg = err.response?.data?.code === 'ACCOUNT_LOCKED' 
+        ? 'ACCOUNT_LOCKED'
+        : (err.response?.data?.message || err.message || 'MPIN Login failed');
+      return rejectWithValue(errMsg);
+    }
+  }
+);
+
+export const configureMpin = createAsyncThunk(
+  'auth/configureMpin',
+  async (payload: { email: string; mpin: string }, { rejectWithValue }) => {
+    try {
+      await axios.post('http://192.168.1.36:8080/auth/set-mpin', payload);
+      const savedPhone = await credentialsStore.getPhone() || '';
+      await credentialsStore.saveCredentials(savedPhone, payload.email, payload.mpin);
+      return payload.mpin;
+    } catch (err: any) {
+      const errMsg = err.response?.data?.message || err.message || 'Failed to configure MPIN';
       return rejectWithValue(errMsg);
     }
   }
@@ -45,9 +85,12 @@ export const registerUser = createAsyncThunk(
   async (payload: any, { rejectWithValue }) => {
     try {
       const response = await axios.post(API_ENDPOINTS.AUTH.REGISTER, payload);
-      const { tokens } = response.data;
+      const { tokens, user } = response.data;
       if (tokens && tokens.accessToken && tokens.refreshToken) {
         await tokenStore.setTokens(tokens.accessToken, tokens.refreshToken);
+      }
+      if (user && user.phone && user.email) {
+        await credentialsStore.saveCredentials(user.phone, user.email);
       }
       return response.data;
     } catch (err: any) {
@@ -68,6 +111,7 @@ export const logoutUser = createAsyncThunk(
       console.warn('API logout failed:', err.message);
     } finally {
       await tokenStore.clear();
+      await credentialsStore.clearMpin();
     }
   }
 );
@@ -82,6 +126,7 @@ const authSlice = createSlice({
       state.refreshToken = null;
       state.error = null;
       tokenStore.clear().catch(err => console.warn('Clear token store failed:', err));
+      credentialsStore.clearMpin().catch(err => console.warn('Clear MPIN failed:', err));
     },
     setTokens(state, action: PayloadAction<{ accessToken: string; refreshToken: string }>) {
       state.accessToken = action.payload.accessToken;
@@ -108,6 +153,36 @@ const authSlice = createSlice({
         state.refreshToken = action.payload.tokens.refreshToken;
       })
       .addCase(loginUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Login MPIN
+      .addCase(loginUserMpin.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loginUserMpin.fulfilled, (state, action: PayloadAction<any>) => {
+        state.loading = false;
+        state.user = action.payload.user;
+        state.accessToken = action.payload.tokens.accessToken;
+        state.refreshToken = action.payload.tokens.refreshToken;
+      })
+      .addCase(loginUserMpin.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Configure MPIN
+      .addCase(configureMpin.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(configureMpin.fulfilled, (state, action: PayloadAction<string>) => {
+        state.loading = false;
+        if (state.user) {
+          state.user.hasMpin = true;
+        }
+      })
+      .addCase(configureMpin.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })

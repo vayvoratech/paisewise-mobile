@@ -21,12 +21,13 @@ import { RootStackParamList } from '../../../app/navigation/types';
 type VerifyOtpScreenProp = NativeStackNavigationProp<RootStackParamList, 'VerifyOtp'>;
 
 export default function VerifyOtpScreen({ route, navigation }: { route: any, navigation: VerifyOtpScreenProp }) {
-  const { email } = route.params;
+  const { email, mode = 'password' } = route.params;
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [isOtpFocused, setIsOtpFocused] = useState(false);
 
   const handleVerifyOtp = async () => {
+    setLoading(true);
     const payload = {
         email: email, 
         otp: otp.toString() 
@@ -35,9 +36,15 @@ export default function VerifyOtpScreen({ route, navigation }: { route: any, nav
     console.log("Sending Payload:", JSON.stringify(payload)); 
 
     try {
-        await axios.post('http://localhost:8080/auth/verify-otp', payload);
-        navigation.navigate('ResetPassword', { email });
+        await axios.post('http://192.168.1.36:8080/auth/verify-otp', payload);
+        setLoading(false);
+        if (mode === 'mpin') {
+            navigation.navigate('ResetMpin', { email });
+        } else {
+            navigation.navigate('ResetPassword', { email });
+        }
     } catch (err: any) {
+        setLoading(false);
         if (err.response) {
             console.error("Server responded with:", err.response.data); 
         }

@@ -24,21 +24,22 @@ import { RootStackParamList } from '../../../app/navigation/types';
 
 type ForgotPasswordScreenProp = NativeStackNavigationProp<RootStackParamList, 'ForgotPasswordScreen'>;
 
-export default function ForgotPasswordScreen({ navigation }: { navigation: ForgotPasswordScreenProp }) {
+export default function ForgotPasswordScreen({ route, navigation }: { route: any, navigation: ForgotPasswordScreenProp }) {
+  const mode = route.params?.mode || 'password';
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isEmailFocused, setIsEmailFocused] = useState(false);
 
   const onSendOtp = async () => {
-    const url = 'http://localhost:8080/auth/forgot-password';
+    const url = 'http://192.168.1.36:8080/auth/forgot-password';
 
     try {
         const payload = { email: email.trim() };
         await axios.post(url, payload);
 
         console.log('Success: OTP request successful');
-        // CHANGE: Navigating to VerifyOtp
-        navigation.navigate('VerifyOtp', { email: email.trim() }); 
+        // Navigating to VerifyOtp with the correct mode
+        navigation.navigate('VerifyOtp', { email: email.trim(), mode }); 
     } catch (err: any) {
         if (err.response) {
             console.error("API Error:", err.response.status);
