@@ -1,6 +1,6 @@
 /** Screen 07 — Daily Quiz. XP at stake, timer, option states, explanation. */
 import React, { useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { HeroBackground } from '../../../shared/ui/HeroBackground';
@@ -10,6 +10,7 @@ import { ProgressBar } from '../../../shared/ui/ProgressBar';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { DAILY_QUIZ } from '../quiz.data';
+import mixpanel from '@core/mixpanel'; // Import mixpanel
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Quiz'>;
 
@@ -19,6 +20,15 @@ export default function QuizScreen({ navigation }: Props) {
   const q = DAILY_QUIZ[index];
   const [secondsLeft, setSecondsLeft] = useState(q.seconds);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Track quiz_started when screen loads
+  useEffect(() => {
+    mixpanel.track('quiz_started', {
+      quiz_id: 'daily_quiz_01', // Or dynamic quiz ID if available
+      total_questions: DAILY_QUIZ.length,
+      device_type: Platform.OS,
+    });
+  }, []);
 
   useEffect(() => {
     setSecondsLeft(q.seconds);
@@ -42,11 +52,29 @@ export default function QuizScreen({ navigation }: Props) {
     if (answered) return;
     setPicked(key);
     if (timerRef.current) clearInterval(timerRef.current);
+
+    const isCorrect = q.options.find((opt) => opt.key === key)?.correct ?? false;
+
+    // Track quiz_question_answered event per spec
+    mixpanel.track('quiz_question_answered', {
+      question_index: index + 1,
+      selected_option: key,
+      is_correct: isCorrect,
+      time_taken_seconds: q.seconds - secondsLeft,
+    });
   };
 
   const next = () => {
-    if (index < DAILY_QUIZ.length - 1) setIndex((i) => i + 1);
-    else navigation.goBack();
+    if (index < DAILY_QUIZ.length - 1) {
+      setIndex((i) => i + 1);
+    } else {
+      // Track quiz_completed when finishing the last question
+      mixpanel.track('quiz_completed', {
+        quiz_id: 'daily_quiz_01',
+        total_questions: DAILY_QUIZ.length,
+      });
+      navigation.goBack();
+    }
   };
 
   return (

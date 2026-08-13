@@ -1,22 +1,29 @@
-/** Screen 06 — Buy / Sell Modal (bottom sheet). Order placement, practice money. */
+/** Screen 06 — Buy / Sell Modal (bottom sheet). Order placement, practice money.
+ *  State is now managed by Redux: portfolioSlice (cash/holdings) + orderSlice (order log).
+ */
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useDispatch, useSelector } from 'react-redux';
 import { Button } from '../../../shared/ui/Button';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { formatINR } from '../../../shared/format';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { marketService } from '../../market/market.service';
 import { Stock } from '../../market/market.types';
-import { usePracticeAccount } from '../../portfolio/PracticeAccountContext';
+import { buyStock } from '../../portfolio/slices/portfolioSlice';
+import { addLocalOrder } from '../slices/orderSlice';
+import type { RootState, AppDispatch } from '../../../app/store';
+import mixpanel from '@core/mixpanel'; // Import mixpanel
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BuySell'>;
 type OrderType = 'MARKET' | 'LIMIT' | 'STOP LOSS';
 
 export default function BuySellScreen({ navigation, route }: Props) {
   const { symbol, mode } = route.params;
-  const { buy } = usePracticeAccount();
+  const dispatch = useDispatch<AppDispatch>();
+  const cash = useSelector((state: RootState) => state.portfolio.cash);
   const [stock, setStock] = useState<Stock | null>(null);
   const [orderType, setOrderType] = useState<OrderType>('MARKET');
   const [qty, setQty] = useState(5);
@@ -32,9 +39,70 @@ export default function BuySellScreen({ navigation, route }: Props) {
   const total = Math.round(stock.price * qty);
   const up = stock.changePct >= 0;
 
+  const handleOrderTypeChange = (t: OrderType) => {
+    setOrderType(t);
+    mixpanel.track('order_type_selected', {
+      order_type: t,
+      symbol: stock.symbol,
+    });
+  };
+
+  const handleQuantityChange = (newQty: number) => {
+    setQty(newQty);
+    mixpanel.track('quantity_changed', {
+      symbol: stock.symbol,
+      quantity: newQty,
+      total_cost: Math.round(stock.price * newQty),
+    });
+  };
+
   const onConfirm = () => {
-    const result = buy(stock.symbol, stock.name, stock.emoji, qty, stock.price);
-    navigation.replace('TradeSuccess', result);
+    const totalPaid = Math.round(stock!.price * qty);
+    const xpEarned = 25;
+
+    // Track paper_order_confirmed when confirmation button is tapped
+    mixpanel.track('paper_order_confirmed', {
+      symbol: stock!.symbol,
+      order_mode: mode,
+      order_type: orderType,
+      shares: qty,
+      total_amount: totalPaid,
+    });
+
+    // Dispatch to Redux portfolioSlice — updates cash, holdings, XP, invested, holdingsValue
+    dispatch(buyStock({
+      symbol: stock!.symbol,
+      name: stock!.name,
+      emoji: stock!.emoji,
+      shares: qty,
+      price: stock!.price,
+    }));
+    
+    // Record in orderSlice order log
+    dispatch(addLocalOrder({
+      symbol: stock!.symbol,
+      shares: qty,
+      pricePerShare: stock!.price,
+      type: 'BUY',
+      timestamp: new Date().toISOString(),
+    }));
+
+    // Track paper_order_placed (simulating backend 200 success response)
+    mixpanel.track('paper_order_placed', {
+      symbol: stock!.symbol,
+      order_mode: mode,
+      shares: qty,
+      price: stock!.price,
+      total_amount: totalPaid,
+    });
+
+    navigation.replace('TradeSuccess', {
+      symbol: stock!.symbol,
+      shares: qty,
+      pricePerShare: stock!.price,
+      totalPaid,
+      xpEarned,
+    });
   };
 
   return (
@@ -60,7 +128,7 @@ export default function BuySellScreen({ navigation, route }: Props) {
           {(['MARKET', 'LIMIT', 'STOP LOSS'] as OrderType[]).map((t) => {
             const active = orderType === t;
             return (
-              <TouchableOpacity key={t} style={[styles.segItem, active && styles.segItemActive]} onPress={() => setOrderType(t)}>
+              <TouchableOpacity key={t} style={[styles.segItem, active && styles.segItemActive]} onPress={() => handleOrderTypeChange(t)}>
                 <Text style={[styles.segText, active && styles.segTextActive]}>{t}</Text>
               </TouchableOpacity>
             );
@@ -70,11 +138,11 @@ export default function BuySellScreen({ navigation, route }: Props) {
         {/* Quantity */}
         <Text style={styles.label}>QUANTITY (SHARES)</Text>
         <View style={styles.qtyRow}>
-          <TouchableOpacity style={styles.stepBtn} onPress={() => setQty((q) => Math.max(1, q - 1))}>
+          <TouchableOpacity style={styles.stepBtn} onPress={() => handleQuantityChange(Math.max(1, qty - 1))}>
             <Text style={styles.stepText}>−</Text>
           </TouchableOpacity>
           <Text style={styles.qtyValue}>{qty}</Text>
-          <TouchableOpacity style={styles.stepBtn} onPress={() => setQty((q) => q + 1)}>
+          <TouchableOpacity style={styles.stepBtn} onPress={() => handleQuantityChange(qty + 1)}>
             <Text style={styles.stepText}>+</Text>
           </TouchableOpacity>
         </View>

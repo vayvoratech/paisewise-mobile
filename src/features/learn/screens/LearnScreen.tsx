@@ -1,6 +1,6 @@
 /** Learn tab — chapter/lesson hub. Opens the Lesson screen. */
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { ScrollView, StyleSheet, Text, View, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -12,6 +12,7 @@ import { ProgressBar } from '../../../shared/ui/ProgressBar';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { MainTabsParamList, RootStackParamList } from '../../../app/navigation/types';
 import { TODAYS_LESSON } from '../learn.data';
+import mixpanel from '@core/mixpanel'; // Import mixpanel
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabsParamList, 'Learn'>,
@@ -26,6 +27,25 @@ const CHAPTERS = [
 ];
 
 export default function LearnScreen({ navigation }: Props) {
+  // Track lesson_list_viewed when the Learn tab/screen opens
+  useEffect(() => {
+    mixpanel.track('lesson_list_viewed', {
+      screen_name: 'LearnScreen',
+      device_type: Platform.OS,
+    });
+  }, []);
+
+  const handleLessonPress = (lessonId: string, lessonTitle: string, chapterNo: number) => {
+    // Track lesson_tapped when user taps a lesson card
+    mixpanel.track('lesson_tapped', {
+      lesson_id: lessonId,
+      lesson_title: lessonTitle,
+      chapter_number: chapterNo,
+    });
+
+    navigation.navigate('Lesson', { lessonId });
+  };
+
   return (
     <View style={styles.root}>
       <HeroBackground tone="dark" style={styles.hero}>
@@ -39,7 +59,10 @@ export default function LearnScreen({ navigation }: Props) {
 
       <ScrollView style={styles.sheet} contentContainerStyle={styles.sheetContent} showsVerticalScrollIndicator={false}>
         <Text style={styles.sectionTitle}>Continue Learning</Text>
-        <Card style={styles.continueCard} onPress={() => navigation.navigate('Lesson', { lessonId: TODAYS_LESSON.id })}>
+        <Card 
+          style={styles.continueCard} 
+          onPress={() => handleLessonPress(TODAYS_LESSON.id, TODAYS_LESSON.title, 3)}
+        >
           <View style={styles.continueRow}>
             <View style={styles.continueIcon}><Text style={{ fontSize: 24 }}>📊</Text></View>
             <View style={{ flex: 1 }}>
@@ -55,7 +78,11 @@ export default function LearnScreen({ navigation }: Props) {
 
         <Text style={[styles.sectionTitle, { marginTop: spacing.xl }]}>All Chapters</Text>
         {CHAPTERS.map((c) => (
-          <Card key={c.no} style={styles.chapter} onPress={() => navigation.navigate('Lesson', { lessonId: TODAYS_LESSON.id })}>
+          <Card 
+            key={c.no} 
+            style={styles.chapter} 
+            onPress={() => handleLessonPress(TODAYS_LESSON.id, c.title, c.no)}
+          >
             <View style={styles.chapterIcon}><Text style={{ fontSize: 22 }}>{c.emoji}</Text></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.chapterTitle}>Chapter {c.no}: {c.title}</Text>

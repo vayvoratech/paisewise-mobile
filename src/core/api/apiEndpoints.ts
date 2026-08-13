@@ -1,6 +1,10 @@
 // /src/core/api/apiEndpoints.ts
 
-export const BASE_URL = 'http://192.168.29.14:8080';
+// export const BASE_URL = 'http://192.168.29.179:8080';
+
+// /src/core/api/apiEndpoints.ts
+
+export const BASE_URL = 'http://192.168.29.179:8080';
 
 export const API_ENDPOINTS = {
   AUTH: {
@@ -10,6 +14,7 @@ export const API_ENDPOINTS = {
     FORGOT_PASSWORD: `${BASE_URL}/auth/forgot-password`,
     VERIFY_OTP: `${BASE_URL}/auth/verify-otp`,
     RESET_PASSWORD: `${BASE_URL}/auth/reset-password`,
+    LOGOUT: `${BASE_URL}/auth/logout`,
   },
   LEARNING: {
     LESSONS: `${BASE_URL}/learning/lessons`,

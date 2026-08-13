@@ -30,7 +30,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: Forgo
   const [isEmailFocused, setIsEmailFocused] = useState(false);
 
   const onSendOtp = async () => {
-    const url = 'http://192.168.29.14:8080/auth/forgot-password';
+    const url = 'http://192.168.29.179:8080/auth/forgot-password';
 
     try {
         const payload = { email: email.trim() };

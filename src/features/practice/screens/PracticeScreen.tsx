@@ -1,6 +1,6 @@
 /** Screen 11 — Practice Trading. Virtual ₹1L, top stocks with BUY/SELL/WHY. */
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -14,7 +14,9 @@ import { formatINR } from '../../../shared/format';
 import { MainTabsParamList, RootStackParamList } from '../../../app/navigation/types';
 import { marketService } from '../../market/market.service';
 import { Stock } from '../../market/market.types';
-import { usePracticeAccount } from '../../portfolio/PracticeAccountContext';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../../app/store';
+import mixpanel from '@core/mixpanel'; // Import mixpanel
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabsParamList, 'Practice'>,
@@ -22,13 +24,48 @@ type Props = CompositeScreenProps<
 >;
 
 export default function PracticeScreen({ navigation }: Props) {
-  const { cash, invested, holdingsValue, starting } = usePracticeAccount();
+  const cash = useSelector((state: RootState) => state.portfolio.cash);
+  const invested = useSelector((state: RootState) => state.portfolio.invested);
+  const holdingsValue = useSelector((state: RootState) => state.portfolio.holdingsValue);
+  const starting = 100_000; // virtual ₹1L seed
   const [stocks, setStocks] = useState<Stock[]>([]);
   const profit = cash + holdingsValue - starting;
 
+  // Track practice_screen_viewed when the Practice tab/screen loads
   useEffect(() => {
+    mixpanel.track('practice_screen_viewed', {
+      device_type: Platform.OS,
+    });
     marketService.getTopStocks().then(setStocks);
   }, []);
+
+  const handleStockTap = (stock: Stock) => {
+    mixpanel.track('stock_tapped', {
+      symbol: stock.symbol,
+      stock_name: stock.name,
+      price: stock.price,
+    });
+    // If you have a Stock Detail screen navigation, place it here, e.g.:
+    // navigation.navigate('StockDetail', { symbol: stock.symbol });
+  };
+
+  const handleBuyPress = (stock: Stock) => {
+    mixpanel.track('buy_modal_opened', {
+      symbol: stock.symbol,
+      price: stock.price,
+      source: 'practice_screen',
+    });
+    navigation.navigate('BuySell', { symbol: stock.symbol, mode: 'buy' });
+  };
+
+  const handleSellPress = (stock: Stock) => {
+    mixpanel.track('sell_modal_opened', {
+      symbol: stock.symbol,
+      price: stock.price,
+      source: 'practice_screen',
+    });
+    navigation.navigate('BuySell', { symbol: stock.symbol, mode: 'sell' });
+  };
 
   return (
     <View style={styles.root}>
@@ -62,7 +99,7 @@ export default function PracticeScreen({ navigation }: Props) {
           const up = s.changePct >= 0;
           const tint = up ? colors.green : colors.pink;
           return (
-            <Card key={s.symbol} style={styles.stockCard}>
+            <Card key={s.symbol} style={styles.stockCard} onPress={() => handleStockTap(s)}>
               <View style={styles.stockHead}>
                 <View>
                   <Text style={styles.stockSym}>{s.symbol}</Text>
@@ -79,10 +116,10 @@ export default function PracticeScreen({ navigation }: Props) {
               </View>
 
               <View style={styles.actions}>
-                <TouchableOpacity style={[styles.action, { backgroundColor: '#E6FAF1' }]} onPress={() => navigation.navigate('BuySell', { symbol: s.symbol, mode: 'buy' })}>
+                <TouchableOpacity style={[styles.action, { backgroundColor: '#E6FAF1' }]} onPress={() => handleBuyPress(s)}>
                   <Text style={[styles.actionText, { color: colors.green }]}>▲  BUY</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.action, { backgroundColor: colors.redSoft }]} onPress={() => navigation.navigate('BuySell', { symbol: s.symbol, mode: 'sell' })}>
+                <TouchableOpacity style={[styles.action, { backgroundColor: colors.redSoft }]} onPress={() => handleSellPress(s)}>
                   <Text style={[styles.actionText, { color: colors.pink }]}>▼  SELL</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.action, { backgroundColor: colors.indigoChip }]}>
@@ -125,9 +162,9 @@ const styles = StyleSheet.create({
   stockCard: {},
   stockHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   stockSym: { ...typography.h3, color: colors.text },
-  stockName: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
+  stockName: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs },
   stockPrice: { ...typography.h3, color: colors.text },
-  stockPct: { ...typography.caption, marginTop: 2 },
+  stockPct: { ...typography.caption, marginTop: spacing.xs },
   chartWrap: { borderRadius: radius.md, marginTop: spacing.md, paddingVertical: spacing.sm, alignItems: 'center', overflow: 'hidden' },
   actions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
   action: { flex: 1, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },

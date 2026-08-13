@@ -1,6 +1,6 @@
 /** Screens 04 + 05 — Lesson Screen with tappable jargon words and quiz CTA. */
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, NativeSyntheticEvent, NativeScrollEvent, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,16 +11,68 @@ import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { TODAYS_LESSON } from '../learn.data';
 import { JargonText } from '../components/JargonText';
+import mixpanel from '@core/mixpanel'; // Import mixpanel
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Lesson'>;
 
 export default function LessonScreen({ navigation }: Props) {
   const lesson = TODAYS_LESSON;
-  const openJargon = (term: string) => navigation.navigate('JargonBuster', { term });
+  
+  // Track scroll depth milestones (25%, 50%, 75%, 100%)
+  const milestonesFired = useRef({ 25: false, 50: false, 75: false, 100: false });
+
+  // Track lesson_started when the screen opens
+  useEffect(() => {
+    mixpanel.track('lesson_started', {
+      lesson_id: lesson.id,
+      lesson_title: lesson.title,
+      chapter_number: lesson.chapterNo,
+      device_type: Platform.OS,
+    });
+  }, [lesson]);
+
+  const openJargon = (term: string) => {
+    // Track jargon_term_tapped event
+    mixpanel.track('jargon_term_tapped', {
+      term: term,
+      lesson_id: lesson.id,
+    });
+    navigation.navigate('JargonBuster', { term });
+  };
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const paddingToBottom = 20;
+    const scrollProgress = (contentOffset.y + layoutMeasurement.height) / (contentSize.height - paddingToBottom);
+    const percentage = Math.min(Math.max(scrollProgress * 100, 0), 100);
+
+    ([25, 50, 75, 100] as const).forEach((milestone) => {
+      if (percentage >= milestone && !milestonesFired.current[milestone]) {
+        milestonesFired.current[milestone] = true;
+        mixpanel.track('lesson_content_scrolled', {
+          lesson_id: lesson.id,
+          scroll_depth_percentage: milestone,
+        });
+      }
+    });
+  };
+
+  const handleQuizPress = () => {
+    mixpanel.track('quiz_started', {
+      source: 'lesson_cta',
+      lesson_id: lesson.id,
+    });
+    navigation.navigate('Quiz');
+  };
 
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.content} 
+        showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={400}
+      >
         {/* Purple lesson header */}
         <LinearGradient colors={[colors.purple, colors.purpleDeep]} style={styles.header}>
           <SafeAreaView edges={['top']}>
@@ -68,8 +120,8 @@ export default function LessonScreen({ navigation }: Props) {
             <Text style={styles.hintText}>Tap any <Text style={styles.hintUnderline}>underlined word</Text> to understand it simply →</Text>
           </View>
 
-          <Button label="🎯 Ready? Take the quiz — Earn 50 XP!" variant="gradientPurple" style={{ marginTop: spacing.lg }} onPress={() => navigation.navigate('Quiz')} />
-          <Button label="Take Quiz & Earn 50 XP ⭐" variant="primary" style={{ marginTop: spacing.md }} onPress={() => navigation.navigate('Quiz')} />
+          <Button label="🎯 Ready? Take the quiz — Earn 50 XP!" variant="gradientPurple" style={{ marginTop: spacing.lg }} onPress={handleQuizPress} />
+          <Button label="Take Quiz & Earn 50 XP ⭐" variant="primary" style={{ marginTop: spacing.md }} onPress={handleQuizPress} />
         </View>
       </ScrollView>
     </View>

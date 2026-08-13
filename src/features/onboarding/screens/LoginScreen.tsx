@@ -21,64 +21,81 @@ import {
 } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import { useDispatch } from 'react-redux';
+import { loginUser } from '../slices/authSlice';
+import mixpanel from '@core/mixpanel'; // Import mixpanel instance
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
-  const [phone, setPhone] = useState('');
+  const dispatch = useDispatch();
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   // Focus states
-  const [isPhoneFocused, setIsPhoneFocused] = useState(false);
+  const [isIdentifierFocused, setIsIdentifierFocused] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
 
   const onSubmit = async () => {
     setError(null);
-    if (!/^\d{10}$/.test(phone.trim())) return setError('Enter a valid 10-digit phone number.');
+    const id = identifier.trim();
+    const isPhone = /^\d{10}$/.test(id);
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(id);
+    
+    if (!isPhone && !isEmail) return setError('Enter a valid 10-digit phone number or email address.');
     if (password.length < 4) return setError('Enter your password.');
 
     setLoading(true);
 
+    // Secure identifier mapping for tracking (last 4 digits if phone, or domain/type if email)
+    const identifierProperty = isPhone 
+      ? { phone_last4: id.slice(-4) } 
+      : { email_domain: id.split('@')[1] || 'unknown' };
+
+    // 1. Track login_submitted event
+    mixpanel.track('login_submitted', {
+      login_method: isPhone ? 'phone' : 'email',
+      ...identifierProperty,
+    });
+
     try {
-      const payload = { phone: phone.trim(), password };
+      // Correctly map identifier to match backend DTO expectation ('phone' or 'email')
+      const payload = isPhone ? { phone: id, password } : { email: id, password };
 
-      const url = 'http://192.168.29.14:8080/auth/login';
-      const response = await axios.post(url, payload);
-
-      // AuthResponse: { user: { id, name, phone }, tokens: { accessToken, refreshToken } }
-      const { user, tokens } = response.data;
-
-      // TODO: persist tokens/user (e.g. AsyncStorage or your existing auth store)
-      // so the app stays logged in and can attach the accessToken to future requests.
-      console.log('Login success:', user, tokens);
+      // Dispatch Redux thunk to log in and save tokens automatically
+      const resultAction = await dispatch(loginUser(payload) as any).unwrap();
 
       setLoading(false);
+
+      const userId = resultAction?.userId || resultAction?.user?.id || 'unknown_user_id';
+
+      // 2. Identify user and track login_success event
+      mixpanel.identify(userId);
+      mixpanel.track('login_success', {
+        login_method: isPhone ? 'phone' : 'email',
+        ...identifierProperty,
+      });
+
       navigation.replace('MainTabs', { screen: 'Home' });
     } catch (err: any) {
       setLoading(false);
 
-      if (err.response) {
-        console.error('Login API Error:', err.response.status, err.response.data);
-        const status = err.response.status;
+      const errorMessage = typeof err === 'string' ? err : err?.message || '';
+      const failureReason = errorMessage.toLowerCase().includes('not found') 
+        ? 'user_not_found' 
+        : 'invalid_credentials';
 
-        if (status === 401 || status === 400 || status === 403 || status === 404) {
-          // Wrong phone number or wrong password — backend now returns 401
-          // for both cases (ResponseStatusException in AuthService.login),
-          // so we don't leak which part of the credentials was wrong.
-          setError('Your phone number or password is incorrect. Please enter valid credentials.');
-        } else if (err.response.data?.message) {
-          setError(err.response.data.message);
-        } else {
-          setError('Could not log in right now. Please try again.');
-        }
-      } else {
-        console.error('Login Connection Error:', err.message);
-        setError('Could not reach the server. Please try again later.');
-      }
+      // 3. Track login_failed event
+      mixpanel.track('login_failed', {
+        login_method: isPhone ? 'phone' : 'email',
+        failure_reason: failureReason,
+        ...identifierProperty,
+      });
+
+      setError(errorMessage || 'Could not log in right now. Please try again.');
     }
   };
 
@@ -90,20 +107,19 @@ export default function LoginScreen({ navigation }: Props) {
             <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>← Back</Text></TouchableOpacity>
             <View style={styles.logo}><Text style={styles.logoEmoji}>🏛️</Text></View>
             <Text style={styles.title}>Welcome back 👋</Text>
-            {/* <Text style={styles.subtitle}>Log in to continue learning</Text> */}
 
-            <Text style={styles.fieldLabel}>Phone number</Text>
-            <View style={[styles.inputWrapper, isPhoneFocused && styles.inputWrapperFocused]}>
+            <Text style={styles.fieldLabel}>Phone number or Email</Text>
+            <View style={[styles.inputWrapper, isIdentifierFocused && styles.inputWrapperFocused]}>
               <TextInput
                 style={styles.input}
-                placeholder="10-digit mobile"
+                placeholder="Phone number or Email address"
                 placeholderTextColor={colors.textFaint}
-                keyboardType="phone-pad"
-                maxLength={10}
-                value={phone}
-                onChangeText={setPhone}
-                onFocus={() => setIsPhoneFocused(true)}
-                onBlur={() => setIsPhoneFocused(false)}
+                keyboardType="default"
+                autoCapitalize="none"
+                value={identifier}
+                onChangeText={setIdentifier}
+                onFocus={() => setIsIdentifierFocused(true)}
+                onBlur={() => setIsIdentifierFocused(false)}
               />
             </View>
 
@@ -113,7 +129,7 @@ export default function LoginScreen({ navigation }: Props) {
                 style={styles.input}
                 placeholder="Your password"
                 placeholderTextColor={colors.textFaint}
-                secureTextEntry={showPassword}
+                secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
                 onFocus={() => setIsPasswordFocused(true)}

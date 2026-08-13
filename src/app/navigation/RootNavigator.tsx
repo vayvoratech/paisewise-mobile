@@ -1,8 +1,4 @@
-/**
- * Root navigator. Stack hosting: Splash → Onboarding → MainTabs, plus the
- * modal/detail screens (Lesson, Quiz, Jargon Buster, Buy/Sell, Trade Success,
- * Community) presented over the tabs.
- */
+/** Screen 03 — Home Dashboard. Greeting, stats, today's lesson, market, quick actions. */
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -21,14 +17,21 @@ import CommunityScreen from '../../features/community/screens/CommunityScreen';
 import ForgotPasswordScreen from '../../features/onboarding/screens/ForgotPasswordScreen';
 import VerifyOtpScreen from '../../features/onboarding/screens/VerifyOtpScreen';
 import ResetPasswordScreen from '../../features/onboarding/screens/ResetPasswordScreen';
-
+import UITestScreen from '../../features/home/screens/UITestScreen'; // Temporary import for testing Task 3
+import { tokenStorage } from '../../core/api/tokenStorage';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
+  // Check if a valid access token exists in storage on app load/refresh
+  const isAuthenticated = !!tokenStorage.getAccessToken();
+
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
+      <Stack.Navigator 
+        initialRouteName={isAuthenticated ? "MainTabs" : "Splash"} 
+        screenOptions={{ headerShown: false }}
+      >
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Signup" component={SignupScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
@@ -36,6 +39,10 @@ export default function RootNavigator() {
         <Stack.Screen name="VerifyOtp" component={VerifyOtpScreen} />
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         <Stack.Screen name="Onboarding" component={GoalSetupScreen} />
+
+        {/* Temporarily pointing to UITestScreen to test Task 3 components */}
+        {/* <Stack.Screen name="MainTabs" component={UITestScreen} /> */}
+
         <Stack.Screen name="MainTabs" component={MainTabs} />
 
         {/* Detail / pushed screens */}

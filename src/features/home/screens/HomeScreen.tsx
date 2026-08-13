@@ -1,5 +1,5 @@
 /** Screen 03 — Home Dashboard. Greeting, stats, today's lesson, market, quick actions. */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CompositeScreenProps } from '@react-navigation/native';
@@ -14,7 +14,10 @@ import { formatINR, formatPct } from '../../../shared/format';
 import { MainTabsParamList, RootStackParamList } from '../../../app/navigation/types';
 import { PROFILE } from '../../profile/profile.data';
 import { TODAYS_LESSON } from '../../learn/learn.data';
-import { usePracticeAccount } from '../../portfolio/PracticeAccountContext';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../../app/store';
+import { tokenStorage } from '../../../core/api/tokenStorage';
+import UITestScreen from './UITestScreen';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabsParamList, 'Home'>,
@@ -35,7 +38,13 @@ const QUICK_ACTIONS: { emoji: string; label: string; go: keyof MainTabsParamList
 ];
 
 export default function HomeScreen({ navigation }: Props) {
-  const { holdingsValue } = usePracticeAccount();
+  useEffect(() => {
+    // Test reading the stored tokens and user ID
+    console.log('Stored Access Token:', tokenStorage.getAccessToken());
+    console.log('Stored User ID:', tokenStorage.getUserId());
+  }, []);
+
+  const holdingsValue = useSelector((state: RootState) => state.portfolio.holdingsValue);
   const gain = 4320;
   const gainPct = 4.3;
 

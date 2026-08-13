@@ -1,6 +1,6 @@
 /** Screen 08 — Portfolio. Plain-English P&L, "Why changed?", holdings. */
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { HeroBackground } from '../../../shared/ui/HeroBackground';
 import { Card } from '../../../shared/ui/Card';
@@ -8,7 +8,11 @@ import { Pill } from '../../../shared/ui/Pill';
 import { Sparkline } from '../../../shared/ui/Sparkline';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { formatINR, formatPct } from '../../../shared/format';
-import { usePracticeAccount } from '../PracticeAccountContext';
+import { useSelector, useDispatch } from 'react-redux';
+import type { RootState, AppDispatch } from '../../../app/store';
+; // Adjust import based on your store slice
+import { resetPortfolio } from '../slices/portfolioSlice';
+import mixpanel from '@core/mixpanel'; // Import mixpanel
 
 const TABS = ['HOLDINGS', 'MUT. FUNDS', 'P&L REPORT'] as const;
 type Tab = (typeof TABS)[number];
@@ -16,11 +20,48 @@ type Tab = (typeof TABS)[number];
 const VALUE_SERIES = [98000, 99200, 98600, 100200, 101000, 100400, 102100, 103200, 103800, 104320];
 
 export default function PortfolioScreen() {
-  const { holdings, holdingsValue, cash, starting } = usePracticeAccount();
+  const dispatch = useDispatch<AppDispatch>();
+  const holdings = useSelector((state: RootState) => state.portfolio.holdings);
+  const holdingsValue = useSelector((state: RootState) => state.portfolio.holdingsValue);
+  const cash = useSelector((state: RootState) => state.portfolio.cash);
+  const starting = 100_000;
   const [tab, setTab] = useState<Tab>('HOLDINGS');
   const totalValue = cash + holdingsValue;
   const gain = totalValue - starting;
   const gainPct = (gain / starting) * 100;
+
+  // Track paper_portfolio_viewed when the Portfolio screen loads
+  useEffect(() => {
+    mixpanel.track('paper_portfolio_viewed', {
+      total_portfolio_value: totalValue,
+      device_type: Platform.OS,
+    });
+  }, [totalValue]);
+
+  // Handle Portfolio Reset with Mixpanel tracking
+  const handleResetRequest = () => {
+    mixpanel.track('paper_reset_requested', {
+      current_portfolio_value: totalValue,
+    });
+
+    Alert.alert(
+      'Reset Portfolio',
+      'Are you sure you want to reset your practice portfolio back to ₹1,00,000?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: () => {
+            mixpanel.track('paper_reset_confirmed', {
+              previous_value: totalValue,
+            });
+            dispatch(resetPortfolio());
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <View style={styles.root}>
@@ -29,10 +70,14 @@ export default function PortfolioScreen() {
           <View style={styles.heroInner}>
             <View style={styles.topRow}>
               <Text style={styles.label}>MY PORTFOLIO</Text>
-              <Pill label="● PRACTICE" color={colors.greenBright} bg="rgba(45,227,164,0.1)" borderColor="rgba(45,227,164,0.4)" />
+              <TouchableOpacity onPress={handleResetRequest}>
+                <Pill label="● PRACTICE (RESET)" color={colors.greenBright} bg="rgba(45,227,164,0.1)" borderColor="rgba(45,227,164,0.4)" />
+              </TouchableOpacity>
             </View>
-            <Text style={styles.total}>{formatINR(104320)}</Text>
-            <Text style={styles.gain}>↑ {formatINR(4320)} ({formatPct(4.3)}) <Text style={styles.gainMuted}>since you started</Text></Text>
+            <Text style={styles.total}>{formatINR(totalValue)}</Text>
+            <Text style={styles.gain}>
+              {gain >= 0 ? '↑' : '↓'} {formatINR(gain)} ({formatPct(gainPct)}) <Text style={styles.gainMuted}>since you started</Text>
+            </Text>
 
             <View style={styles.chart}>
               <Sparkline data={VALUE_SERIES} width={320} height={90} color={colors.greenBright} />

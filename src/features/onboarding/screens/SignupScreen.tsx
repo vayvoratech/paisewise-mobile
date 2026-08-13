@@ -7,7 +7,9 @@ import { Button } from '../../../shared/ui/Button';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import { useDispatch } from 'react-redux';
+import { registerUser } from '../slices/authSlice';
+import mixpanel from '@core/mixpanel'; // Import mixpanel instance
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Signup'>;
 
@@ -41,6 +43,7 @@ function validatePassword(pwd: string): string | null {
 }
 
 export default function SignupScreen({ navigation }: Props) {
+  const dispatch = useDispatch();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -83,39 +86,56 @@ export default function SignupScreen({ navigation }: Props) {
 
     setLoading(true);
 
+    const trimmedPhone = phone.trim();
+    const phoneLast4 = trimmedPhone.slice(-4); // Securely extract last 4 digits per spec
+
+    // 1. Track registration_submitted event
+    mixpanel.track('registration_submitted', {
+      phone_last4: phoneLast4,
+      password_strength: 'medium',
+    });
+
     try {
       // Matches RegisterRequest DTO: phone, name, email, password, confirmPassword
       const payload = {
-        phone: phone.trim(),
+        phone: trimmedPhone,
         name: name.trim(),
         email: email.trim(),
         password,
         confirmPassword,
       };
 
-      const url = 'http://192.168.29.14:8080/auth/register';
-      await axios.post(url, payload);
+      // Dispatch Redux thunk to register and save tokens
+      const resultAction = await dispatch(registerUser(payload) as any).unwrap();
 
       setLoading(false);
+
+      // Extract user ID from result/response if available
+      const userId = resultAction?.userId || resultAction?.user?.id || 'unknown_user_id';
+
+      // 2. Identify user & track registration_success event
+      mixpanel.identify(userId);
+      mixpanel.track('registration_success', {
+        phone_last4: phoneLast4,
+        is_new_user: true,
+      });
+
       navigation.replace('Onboarding');
     } catch (err: any) {
       setLoading(false);
 
-      if (err.response) {
-        // Backend validation errors (e.g. duplicate phone/email) come back as 400/409
-        console.error('Register API Error:', err.response.status, err.response.data);
+      // 3. Determine failure reason and track registration_failed event
+      const errorMessage = typeof err === 'string' ? err : err?.message || '';
+      const failureReason = errorMessage.toLowerCase().includes('exist') 
+        ? 'phone_exists' 
+        : 'server_error';
 
-        if (err.response.status === 409) {
-          setError('An account with this phone or email already exists.');
-        } else if (err.response.data?.message) {
-          setError(err.response.data.message);
-        } else {
-          setError('Could not create account. Please check your details and try again.');
-        }
-      } else {
-        console.error('Register Connection Error:', err.message);
-        setError('Could not reach the server. Please try again later.');
-      }
+      mixpanel.track('registration_failed', {
+        phone_last4: phoneLast4,
+        failure_reason: failureReason,
+      });
+
+      setError(errorMessage || 'Could not create account. Please check your details and try again.');
     }
   };
 
@@ -327,7 +347,7 @@ const styles = StyleSheet.create({
     color: colors.pink,
     marginTop: spacing.xs,
   },
-  hint: {
+    hint: {
     ...typography.caption,
     color: colors.textFaint,
     marginTop: -spacing.sm,
