@@ -1,6 +1,6 @@
 /** Screen 01 — Splash / Landing. Brand + primary CTA. */
 import React, { useEffect } from 'react';
-import { Image, StyleSheet, Text, View, Platform } from 'react-native';
+import { StyleSheet, Text, View, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useDispatch } from 'react-redux';
@@ -9,29 +9,56 @@ import { Button } from '../../../shared/ui/Button';
 import { Pill } from '../../../shared/ui/Pill';
 import { colors, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
-import { tokenStore } from '../../../core/security/secureStore';
-import { setTokens } from '../slices/authSlice';
+import { tokenStorage } from '../../../core/api/tokenStorage'; // Using your verified tokenStorage utility from Week 12
+import { setTokens, refreshTokenThunk } from '../slices/authSlice';
 import mixpanel from '@core/mixpanel'; // Import mixpanel instance
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 
 export default function SplashScreen({ navigation }: Props) {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<any>();
 
   useEffect(() => {
-    const checkSession = async () => {
+    const initializeApp = async () => {
+      // 1. Enforce a minimum 2-second display timer for branding & loading experience
+      const timerPromise = new Promise((resolve) => setTimeout(resolve, 2000));
+
+      let sessionRestored = false;
+
       try {
-        const accessToken = await tokenStore.getAccessToken();
-        const refreshToken = await tokenStore.getRefreshToken();
+        const accessToken = tokenStorage.getAccessToken();
+        const refreshToken = tokenStorage.getRefreshToken();
+
         if (accessToken && refreshToken) {
+          // Tokens exist locally, populate store and flag success
           dispatch(setTokens({ accessToken, refreshToken }));
-          navigation.replace('MainTabs', undefined as any);
+          sessionRestored = true;
+        } else if (refreshToken && !accessToken) {
+          // Edge case: Access token expired, attempt silent token refresh
+          try {
+            await dispatch(refreshTokenThunk()).unwrap();
+            sessionRestored = true;
+          } catch (refreshErr) {
+            console.warn('Silent token refresh failed during splash:', refreshErr);
+            // Clear dead tokens safely using verified tokenStorage method
+            tokenStorage.clearTokens();
+          }
         }
       } catch (err) {
         console.warn('Failed to restore login session on startup:', err);
       }
+
+      // Ensure minimum 2 seconds have elapsed before routing
+      await timerPromise;
+
+      // 2. Conditional navigation based on session status
+      if (sessionRestored) {
+        navigation.replace('MainTabs', undefined as any);
+      }
+      // If not authenticated, user stays on this Splash/Landing screen layout to interact with CTAs
     };
-    checkSession();
+
+    initializeApp();
   }, [dispatch, navigation]);
 
   const handleStartFreePress = () => {
