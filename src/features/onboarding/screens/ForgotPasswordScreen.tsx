@@ -20,6 +20,7 @@ import {
   typography,
 } from '../../../core/theme/theme';
 import axios from 'axios';
+import { BASE_URL } from '../../../core/api/apiEndpoints';
 import { RootStackParamList } from '../../../app/navigation/types';
 
 type ForgotPasswordScreenProp = NativeStackNavigationProp<RootStackParamList, 'ForgotPasswordScreen'>;
@@ -31,7 +32,7 @@ export default function ForgotPasswordScreen({ route, navigation }: { route: any
   const [isEmailFocused, setIsEmailFocused] = useState(false);
 
   const onSendOtp = async () => {
-    const url = 'http://192.168.1.36:8080/auth/forgot-password';
+    const url = `${BASE_URL}/auth/forgot-password`;
 
     try {
         const payload = { email: email.trim() };

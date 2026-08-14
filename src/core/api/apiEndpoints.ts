@@ -1,6 +1,21 @@
-// /src/core/api/apiEndpoints.ts
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
-export const BASE_URL = 'http://192.168.1.36:8080';
+const getDevIp = () => {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    return window.location.hostname;
+  }
+  const hostUri = Constants.expoConfig?.hostUri;
+  if (hostUri) {
+    return hostUri.split(':')[0];
+  }
+  return 'localhost';
+};
+
+const DEV_IP = getDevIp();
+
+export const BASE_URL = `http://${DEV_IP}:8080`;
+
 
 export const API_ENDPOINTS = {
   AUTH: {

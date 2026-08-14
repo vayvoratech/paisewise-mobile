@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
-import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
+import { API_ENDPOINTS, BASE_URL } from '../../../core/api/apiEndpoints';
 import { tokenStore, credentialsStore } from '../../../core/security/secureStore';
 
 interface AuthState {
@@ -47,7 +47,7 @@ export const loginUserMpin = createAsyncThunk(
   'auth/loginMpin',
   async (payload: { phone: string; mpin: string }, { rejectWithValue }) => {
     try {
-      const response = await axios.post('http://192.168.1.36:8080/auth/login/mpin', payload);
+      const response = await axios.post(`${BASE_URL}/auth/login/mpin`, payload);
       const { tokens, user } = response.data;
       if (tokens && tokens.accessToken && tokens.refreshToken) {
         await tokenStore.setTokens(tokens.accessToken, tokens.refreshToken);
@@ -69,7 +69,7 @@ export const configureMpin = createAsyncThunk(
   'auth/configureMpin',
   async (payload: { email: string; mpin: string }, { rejectWithValue }) => {
     try {
-      await axios.post('http://192.168.1.36:8080/auth/set-mpin', payload);
+      await axios.post(`${BASE_URL}/auth/set-mpin`, payload);
       const savedPhone = await credentialsStore.getPhone() || '';
       await credentialsStore.saveCredentials(savedPhone, payload.email, payload.mpin);
       return payload.mpin;

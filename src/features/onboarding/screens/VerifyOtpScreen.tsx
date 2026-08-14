@@ -17,6 +17,7 @@ import { HeroBackground } from '../../../shared/ui/HeroBackground';
 import { Button } from '../../../shared/ui/Button';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
+import { BASE_URL } from '../../../core/api/apiEndpoints';
 
 type VerifyOtpScreenProp = NativeStackNavigationProp<RootStackParamList, 'VerifyOtp'>;
 
@@ -36,7 +37,7 @@ export default function VerifyOtpScreen({ route, navigation }: { route: any, nav
     console.log("Sending Payload:", JSON.stringify(payload)); 
 
     try {
-        await axios.post('http://192.168.1.36:8080/auth/verify-otp', payload);
+        await axios.post(`${BASE_URL}/auth/verify-otp`, payload);
         setLoading(false);
         if (mode === 'mpin') {
             navigation.navigate('ResetMpin', { email });

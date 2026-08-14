@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import axios from 'axios';
+import { BASE_URL } from '../../../core/api/apiEndpoints';
 import { HeroBackground } from '../../../shared/ui/HeroBackground';
 import { Button } from '../../../shared/ui/Button';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
@@ -57,12 +58,12 @@ export default function ResetMpinScreen({ route, navigation }: Props) {
           throw new Error('User session phone not found. Please log in again.');
         }
         // Verify current MPIN by attempting login/validation against backend
-        await axios.post('http://192.168.1.36:8080/auth/login/mpin', { phone, mpin: currentMpin });
+        await axios.post(`${BASE_URL}/auth/login/mpin`, { phone, mpin: currentMpin });
       }
 
       // Update MPIN on the backend database
       const payload = { email, mpin };
-      await axios.post('http://192.168.1.36:8080/auth/set-mpin', payload);
+      await axios.post(`${BASE_URL}/auth/set-mpin`, payload);
       
       // Update local storage keychain
       const savedPhone = await credentialsStore.getPhone() || '';
