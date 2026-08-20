@@ -20,13 +20,13 @@ export default function ProfileScreen() {
 
   const performLogout = async () => {
     try {
-      await dispatch(logoutUser(refreshToken) as any).unwrap();
+     await dispatch(logoutUser() as any).unwrap();
     } catch (err) {
       console.warn('API logout failed, clearing session anyway:', err);
     } finally {
       navigation.reset({
         index: 0,
-        routes: [{ name: 'Splash' }],
+        routes: [{ name: 'Auth' }],
       });
     }
   };

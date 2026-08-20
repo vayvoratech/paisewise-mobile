@@ -1,4 +1,4 @@
-/** Trade Success — confirmation + XP earned + order receipt. */
+/** Trade Success — confirmation + XP earned + order receipt with dynamic buy/sell copy. */
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,13 +12,24 @@ import { RootStackParamList } from '../../../app/navigation/types';
 type Props = NativeStackScreenProps<RootStackParamList, 'TradeSuccess'>;
 
 export default function TradeSuccessScreen({ navigation, route }: Props) {
-  const { symbol, shares, pricePerShare, totalPaid, xpEarned } = route.params;
+  // Cast route.params to include 'mode' safely to prevent TS complaints
+  const params = route.params as {
+    symbol: string;
+    shares: number;
+    pricePerShare: number;
+    totalPaid: number;
+    xpEarned: number;
+    mode?: 'buy' | 'sell';
+  };
+
+  const { symbol, shares, pricePerShare, totalPaid, xpEarned, mode = 'buy' } = params;
+  const isBuy = mode === 'buy';
 
   const rows: [string, string][] = [
     ['STOCK', symbol],
     ['QUANTITY', `${shares} shares`],
     ['PRICE/SHARE', `₹${pricePerShare.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`],
-    ['TOTAL PAID', formatINR(totalPaid)],
+    [isBuy ? 'TOTAL PAID' : 'TOTAL RECEIVED', formatINR(totalPaid)],
     ['ORDER TYPE', 'MARKET · CNC'],
   ];
 
@@ -30,9 +41,15 @@ export default function TradeSuccessScreen({ navigation, route }: Props) {
             <Text style={styles.check}>✅</Text>
           </View>
 
-          <Text style={styles.title}>Trade</Text>
-          <Text style={styles.titleAccent}>Successful!</Text>
-          <Text style={styles.sub}>You just bought {shares} shares of {symbol}.{'\n'}You're officially an investor now!</Text>
+          <Text style={styles.title}>Order</Text>
+          <Text style={[styles.titleAccent, !isBuy && { color: '#FF6B6B' }]}>
+            {isBuy ? 'Successful!' : 'Executed!'}
+          </Text>
+          <Text style={styles.sub}>
+            {isBuy 
+              ? `You just bought ${shares} shares of ${symbol}.\nYou're officially an investor now!` 
+              : `You successfully sold ${shares} shares of ${symbol}.\nProceeds added to your practice balance.`}
+          </Text>
 
           {/* Receipt */}
           <View style={styles.receipt}>
