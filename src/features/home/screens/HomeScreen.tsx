@@ -1,6 +1,6 @@
-/** Screen 03 — Home Dashboard. Production Architecture with Search Bar & Dynamic Tickers */
+/** Screen 03 — Home Dashboard.*/
 import React, { useState, useCallback, useEffect } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, TextInput, RefreshControl } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -21,7 +21,7 @@ type Props = CompositeScreenProps<
   NativeStackScreenProps<RootStackParamList>
 >;
 
-// Production market list driving dynamic StockDetail routing
+
 const MARKET = [
   { symbol: 'RELIANCE', value: 2952, pct: 1.2 },
   { symbol: 'TCS', value: 3801, pct: -0.8 },
@@ -55,8 +55,9 @@ export default function HomeScreen({ navigation }: Props) {
 
   return (
     <View style={styles.root}>
-      <HeroBackground tone="dark" style={styles.hero}>
-        <SafeAreaView edges={['top']}>
+      {/* SafeAreaView applied at the root container level to push content below Dynamic Island/notch */}
+      <SafeAreaView edges={['top']} style={styles.safeAreaHeader}>
+        <HeroBackground tone="dark" style={styles.hero}>
           <View style={styles.heroInner}>
             <View style={styles.greetRow}>
               <View>
@@ -78,7 +79,7 @@ export default function HomeScreen({ navigation }: Props) {
               onPress={() => navigation.navigate('SymbolSearch' as any)}
             >
               <Text style={styles.searchIcon}>🔍</Text>
-              <Text style={styles.searchPlaceholder}>Search stocks, ETFs, indices (e.g., AAPL, RELIANCE)...</Text>
+              <Text style={styles.searchPlaceholder}>Search stocks, ETFs, indices...</Text>
             </TouchableOpacity>
 
             <Card dark style={styles.statCard}>
@@ -96,8 +97,8 @@ export default function HomeScreen({ navigation }: Props) {
               </View>
             </Card>
           </View>
-        </SafeAreaView>
-      </HeroBackground>
+        </HeroBackground>
+      </SafeAreaView>
 
       <ScrollView 
         style={styles.sheet} 
@@ -129,7 +130,7 @@ export default function HomeScreen({ navigation }: Props) {
           </View>
         </Card>
 
-        {/* Market Now — Dynamically mapping to StockDetail with respective ticker symbols */}
+        {/* Market Now */}
         <View style={[styles.sectionHead, { marginTop: spacing.xl }]}>
           <Text style={styles.sectionTitle}>Market Now</Text>
           <Pill label="● LIVE" color={colors.green} bg={colors.greenSoft} />
@@ -150,7 +151,7 @@ export default function HomeScreen({ navigation }: Props) {
           ))}
         </View>
 
-        {/* Quick actions including Watchlist navigation */}
+        {/* Quick actions */}
         <Text style={[styles.sectionTitle, { marginTop: spacing.xl, marginBottom: spacing.md }]}>Quick Actions</Text>
         <View style={styles.quickRow}>
           {QUICK_ACTIONS.map((q) => (
@@ -167,19 +168,20 @@ export default function HomeScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceAlt },
+  safeAreaHeader: { backgroundColor: 'transparent' },
   hero: { flexGrow: 0 },
   heroInner: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xl },
-  greetRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: spacing.md },
+  greetRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: spacing.xs },
   namaste: { ...typography.overline, color: colors.textMutedDark },
   morning: { ...typography.h1, color: colors.textOnDark, marginTop: 4 },
   bell: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' },
   bellEmoji: { fontSize: 22 },
   bellBadge: { position: 'absolute', top: 6, right: 6, backgroundColor: colors.pink, borderRadius: 9, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   bellBadgeText: { color: colors.white, fontSize: 11, fontWeight: '700' },
-  searchBarContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: radius.lg, paddingHorizontal: spacing.md, paddingVertical: 12, marginTop: spacing.lg, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  searchBarContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: radius.lg, paddingHorizontal: spacing.md, paddingVertical: 12, marginTop: spacing.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
   searchIcon: { fontSize: 16, marginRight: spacing.sm },
   searchPlaceholder: { color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: '500' },
-  statCard: { marginTop: spacing.lg },
+  statCard: { marginTop: spacing.md },
   statRow: { flexDirection: 'row', justifyContent: 'space-between' },
   statLabel: { ...typography.overline, color: colors.textMutedDark },
   statValue: { ...typography.h1, color: colors.textOnDark, marginTop: 4 },
@@ -202,7 +204,7 @@ const styles = StyleSheet.create({
   marketVal: { ...typography.body, color: colors.text, marginTop: 4 },
   marketPct: { ...typography.caption, marginTop: 4 },
   quickRow: { flexDirection: 'row', gap: spacing.sm },
-  quickCard: { flex: 1, alignItems: 'center', paddingVertical: spacing.md + 2, paddingHorizontal: 2 },
-  quickEmoji: { fontSize: 24 },
-  quickLabel: { ...typography.overline, color: colors.textMuted, marginTop: spacing.xs, fontSize: 9.5, letterSpacing: -0.2, fontWeight: '700' },
+  quickCard: { flex: 1, alignItems: 'center', paddingVertical: spacing.md, paddingHorizontal: 4 },
+  quickEmoji: { fontSize: 22 },
+  quickLabel: { ...typography.overline, color: colors.textMuted, marginTop: spacing.xs, fontSize: 9, letterSpacing: -0.2, fontWeight: '700' },
 });
