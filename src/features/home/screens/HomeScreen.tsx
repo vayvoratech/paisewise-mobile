@@ -1,6 +1,6 @@
-/** Screen 03 — Home Dashboard. Greeting, stats, today's lesson, market, quick actions. */
-import React, { useEffect } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+/** Screen 03 — Home Dashboard. Production Architecture with Search Bar & Dynamic Tickers */
+import React, { useState, useCallback, useEffect } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, TextInput, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -14,37 +14,42 @@ import { formatINR, formatPct } from '../../../shared/format';
 import { MainTabsParamList, RootStackParamList } from '../../../app/navigation/types';
 import { PROFILE } from '../../profile/profile.data';
 import { TODAYS_LESSON } from '../../learn/learn.data';
-import { useSelector } from 'react-redux';
-import type { RootState } from '../../../app/store';
 import { tokenStorage } from '../../../core/api/tokenStorage';
-import UITestScreen from './UITestScreen';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabsParamList, 'Home'>,
   NativeStackScreenProps<RootStackParamList>
 >;
 
+// Production market list driving dynamic StockDetail routing
 const MARKET = [
   { symbol: 'RELIANCE', value: 2952, pct: 1.2 },
   { symbol: 'TCS', value: 3801, pct: -0.8 },
   { symbol: 'NIFTY', value: 22456, pct: 0.5 },
 ];
 
-const QUICK_ACTIONS: { emoji: string; label: string; go: keyof MainTabsParamList | 'Community' }[] = [
-  { emoji: '🎮', label: 'PRACTICE', go: 'Practice' },
+const QUICK_ACTIONS: { emoji: string; label: string; go: keyof MainTabsParamList | 'Community' | 'Watchlist' }[] = [
+  { emoji: '⭐', label: 'WATCHLIST', go: 'Watchlist' },
   { emoji: '📚', label: 'LEARN', go: 'Learn' },
   { emoji: '🧮', label: 'CALCULATE', go: 'Learn' },
   { emoji: '👥', label: 'COMMUNITY', go: 'Community' },
 ];
 
 export default function HomeScreen({ navigation }: Props) {
+  const [refreshing, setRefreshing] = useState(false);
+
   useEffect(() => {
-    // Test reading the stored tokens and user ID
     console.log('Stored Access Token:', tokenStorage.getAccessToken());
     console.log('Stored User ID:', tokenStorage.getUserId());
   }, []);
 
-  const holdingsValue = useSelector((state: RootState) => state.portfolio.holdingsValue);
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  }, []);
+
   const gain = 4320;
   const gainPct = 4.3;
 
@@ -66,7 +71,15 @@ export default function HomeScreen({ navigation }: Props) {
               </TouchableOpacity>
             </View>
 
-            <Pill label="🔥 7 day streak" color={colors.amber} bg="rgba(245,158,11,0.12)" borderColor="rgba(245,158,11,0.4)" style={styles.streak} />
+            {/* Production Search Bar: Tapping this opens SymbolSearchScreen */}
+            <TouchableOpacity 
+              style={styles.searchBarContainer}
+              activeOpacity={0.9}
+              onPress={() => navigation.navigate('SymbolSearch' as any)}
+            >
+              <Text style={styles.searchIcon}>🔍</Text>
+              <Text style={styles.searchPlaceholder}>Search stocks, ETFs, indices (e.g., AAPL, RELIANCE)...</Text>
+            </TouchableOpacity>
 
             <Card dark style={styles.statCard}>
               <View style={styles.statRow}>
@@ -86,7 +99,14 @@ export default function HomeScreen({ navigation }: Props) {
         </SafeAreaView>
       </HeroBackground>
 
-      <ScrollView style={styles.sheet} contentContainerStyle={styles.sheetContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.sheet} 
+        contentContainerStyle={styles.sheetContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.amber} />
+        }
+      >
         {/* Today's lesson */}
         <View style={styles.sectionHead}>
           <Text style={styles.sectionTitle}>Today's Lesson</Text>
@@ -109,28 +129,18 @@ export default function HomeScreen({ navigation }: Props) {
           </View>
         </Card>
 
-        <Card style={[styles.lessonCard, { marginTop: spacing.md }]}>
-          <View style={styles.lessonRow}>
-            <View style={[styles.lessonIcon, { backgroundColor: colors.greenSoft }]}><Text style={{ fontSize: 22 }}>💰</Text></View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.lessonTitle}>SIP: ₹500/month magic</Text>
-              <Text style={styles.lessonMeta}>4 MIN · DONE YESTERDAY</Text>
-              <View style={{ marginTop: spacing.sm }}>
-                <ProgressBar progress={1} color={colors.orange} trackColor={colors.border} />
-              </View>
-            </View>
-            <View style={styles.doneBadge}><Text style={styles.doneCheck}>✓</Text></View>
-          </View>
-        </Card>
-
-        {/* Market now */}
+        {/* Market Now — Dynamically mapping to StockDetail with respective ticker symbols */}
         <View style={[styles.sectionHead, { marginTop: spacing.xl }]}>
           <Text style={styles.sectionTitle}>Market Now</Text>
           <Pill label="● LIVE" color={colors.green} bg={colors.greenSoft} />
         </View>
         <View style={styles.marketRow}>
           {MARKET.map((m) => (
-            <Card key={m.symbol} style={styles.marketCard}>
+            <Card 
+              key={m.symbol} 
+              style={styles.marketCard} 
+              onPress={() => navigation.navigate('StockDetail', { symbol: m.symbol })}
+            >
               <Text style={styles.marketSym}>{m.symbol}</Text>
               <Text style={styles.marketVal}>{formatINR(m.value)}</Text>
               <Text style={[styles.marketPct, { color: m.pct >= 0 ? colors.green : colors.pink }]}>
@@ -140,13 +150,13 @@ export default function HomeScreen({ navigation }: Props) {
           ))}
         </View>
 
-        {/* Quick actions */}
+        {/* Quick actions including Watchlist navigation */}
         <Text style={[styles.sectionTitle, { marginTop: spacing.xl, marginBottom: spacing.md }]}>Quick Actions</Text>
         <View style={styles.quickRow}>
           {QUICK_ACTIONS.map((q) => (
             <Card key={q.label} style={styles.quickCard} onPress={() => navigation.navigate(q.go as any)}>
               <Text style={styles.quickEmoji}>{q.emoji}</Text>
-              <Text style={styles.quickLabel}>{q.label}</Text>
+              <Text numberOfLines={1} adjustsFontSizeToFit style={styles.quickLabel}>{q.label}</Text>
             </Card>
           ))}
         </View>
@@ -166,7 +176,9 @@ const styles = StyleSheet.create({
   bellEmoji: { fontSize: 22 },
   bellBadge: { position: 'absolute', top: 6, right: 6, backgroundColor: colors.pink, borderRadius: 9, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   bellBadgeText: { color: colors.white, fontSize: 11, fontWeight: '700' },
-  streak: { marginTop: spacing.lg },
+  searchBarContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: radius.lg, paddingHorizontal: spacing.md, paddingVertical: 12, marginTop: spacing.lg, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  searchIcon: { fontSize: 16, marginRight: spacing.sm },
+  searchPlaceholder: { color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: '500' },
   statCard: { marginTop: spacing.lg },
   statRow: { flexDirection: 'row', justifyContent: 'space-between' },
   statLabel: { ...typography.overline, color: colors.textMutedDark },
@@ -184,15 +196,13 @@ const styles = StyleSheet.create({
   lessonIcon: { width: 48, height: 48, borderRadius: radius.md, backgroundColor: '#E5EDFF', alignItems: 'center', justifyContent: 'center' },
   lessonTitle: { ...typography.bodyBold, color: colors.text },
   lessonMeta: { ...typography.overline, color: colors.textMuted, marginTop: 2 },
-  doneBadge: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
-  doneCheck: { color: colors.green, fontWeight: '800' },
   marketRow: { flexDirection: 'row', gap: spacing.md },
   marketCard: { flex: 1, paddingVertical: spacing.lg, paddingHorizontal: spacing.md },
   marketSym: { ...typography.bodyBold, color: colors.text, fontSize: 15 },
   marketVal: { ...typography.body, color: colors.text, marginTop: 4 },
   marketPct: { ...typography.caption, marginTop: 4 },
-  quickRow: { flexDirection: 'row', gap: spacing.md },
-  quickCard: { flex: 1, alignItems: 'center', paddingVertical: spacing.lg, paddingHorizontal: 4 },
-  quickEmoji: { fontSize: 26 },
-  quickLabel: { ...typography.overline, color: colors.textMuted, marginTop: spacing.sm, fontSize: 10 },
+  quickRow: { flexDirection: 'row', gap: spacing.sm },
+  quickCard: { flex: 1, alignItems: 'center', paddingVertical: spacing.md + 2, paddingHorizontal: 2 },
+  quickEmoji: { fontSize: 24 },
+  quickLabel: { ...typography.overline, color: colors.textMuted, marginTop: spacing.xs, fontSize: 9.5, letterSpacing: -0.2, fontWeight: '700' },
 });

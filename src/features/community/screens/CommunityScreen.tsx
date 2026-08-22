@@ -6,7 +6,7 @@ import { Pill } from '../../../shared/ui/Pill';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { COMMUNITY_POSTS, ONLINE_COUNT, CommunityPost } from '../community.data';
 
-export default function CommunityScreen() {
+export default function CommunityScreen({ navigation }: any) {
   const [draft, setDraft] = useState('');
 
   return (
@@ -15,7 +15,16 @@ export default function CommunityScreen() {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>👥 Community</Text>
+            <View style={styles.headerLeft}>
+              <TouchableOpacity 
+                style={styles.backBtn} 
+                onPress={() => navigation.goBack()}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.backIcon}>←</Text>
+              </TouchableOpacity>
+              <Text style={styles.title}>👥 Community</Text>
+            </View>
             <Pill label={`● ${ONLINE_COUNT} online`} color={colors.green} bg={colors.greenSoft} mono />
           </View>
           <Text style={styles.subtitle}>No question is stupid. Ask anything about investing!</Text>
@@ -82,7 +91,10 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceAlt },
   content: { padding: spacing.xl, paddingBottom: spacing.lg, gap: spacing.lg },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { ...typography.hero, fontSize: 30, color: colors.text },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 },
+  backBtn: { padding: 4 },
+  backIcon: { fontSize: 24, fontWeight: '700', color: colors.text },
+  title: { ...typography.hero, fontSize: 26, color: colors.text },
   subtitle: { ...typography.body, color: colors.textMuted, marginTop: -spacing.sm },
   safeBanner: { backgroundColor: colors.greenSoft, borderRadius: radius.md, padding: spacing.lg },
   safeText: { ...typography.bodyBold, color: '#0F7A52' },

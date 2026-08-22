@@ -16,13 +16,18 @@ import BuySellScreen from '../../features/practice/screens/BuySellScreen';
 import TradeSuccessScreen from '../../features/practice/screens/TradeSuccessScreen';
 import CommunityScreen from '../../features/community/screens/CommunityScreen';
 
+// Import Watchlist feature screens
+import WatchlistScreen from '../../features/watchlist/screens/WatchlistScreen';
+import SymbolSearchScreen from '../../features/search/screens/SymbolSearchScreen';
+import StockDetailScreen from '../../features/market/screens/StockDetailScreen';
+
 const Stack = createNativeStackNavigator<any>();
 
 export default function RootNavigator() {
   // Check if a valid access token exists
-  //const isAuthenticated = !!tokenStorage.getAccessToken();
+  const isAuthenticated = !!tokenStorage.getAccessToken();
   // const isAuthenticated = false;
-  const isAuthenticated = true;
+  // const isAuthenticated = true;
 
   return (
     <NavigationContainer>
@@ -40,6 +45,9 @@ export default function RootNavigator() {
         <Stack.Screen name="Lesson" component={LessonScreen as any} />
         <Stack.Screen name="Quiz" component={QuizScreen as any} />
         <Stack.Screen name="Community" component={CommunityScreen} />
+        <Stack.Screen name="Watchlist" component={WatchlistScreen as any} />
+        <Stack.Screen name="SymbolSearch" component={SymbolSearchScreen as any} />
+       <Stack.Screen name="StockDetail" component={StockDetailScreen as any} /> 
 
         {/* Transparent modal sheets */}
         <Stack.Group screenOptions={{ presentation: 'transparentModal', animation: 'slide_from_bottom' }}>

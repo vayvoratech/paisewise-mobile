@@ -11,6 +11,7 @@ export type MainTabsParamList = {
   Home: undefined;
   Learn: undefined;
   Practice: undefined;
+  Watchlist: undefined;
   Portfolio: undefined;
   Profile: undefined;
 };
@@ -27,13 +28,15 @@ export type RootStackParamList = {
   Lesson: { lessonId: string };
   JargonBuster: { term: string };
   Quiz: undefined;
-  BuySell: { symbol: string; mode: 'buy' | 'sell' };
+  StockDetail: { symbol: string };
+  BuySell: { symbol: string; action: 'BUY' | 'SELL'; mode?: 'buy' | 'sell' };
   TradeSuccess: {
     symbol: string;
     shares: number;
     pricePerShare: number;
     totalPaid: number;
     xpEarned: number;
+    mode?: 'buy' | 'sell';
   };
   Community: undefined;
 };
