@@ -5,7 +5,7 @@ import { Stock, IndexQuote } from '../market.types';
 
 export type ConnectionStatus = 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'DISCONNECTED';
 
-// Define the shape of individual live tick data
+
 export interface TickData {
   symbol: string;
   ltp: number;
@@ -17,7 +17,7 @@ export interface TickData {
 interface MarketState {
   stocks: Stock[];
   indices: IndexQuote[];
-  ticks: Record<string, TickData>; // Stores live ticks keyed by symbol
+  ticks: Record<string, TickData>; 
   loading: boolean;
   error: string | null;
   connectionStatus: ConnectionStatus;

@@ -114,7 +114,6 @@ export default function ResetPasswordScreen({ route, navigation }: { route: any,
   );
 }
 
-// Styles updated to use your central theme spacing/radius constants
 const styles = StyleSheet.create({
   safe: { flex: 1, paddingHorizontal: spacing.xl },
   scroll: { flexGrow: 1, justifyContent: 'center' },
@@ -122,13 +121,14 @@ const styles = StyleSheet.create({
   field: { marginBottom: spacing.lg },
   fieldLabel: { ...typography.caption, color: colors.textMutedDark, marginBottom: spacing.sm },
   inputWrapper: {
+    height: 54, // Fixed height so it stays compact and neat
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderColor: colors.borderDark,
     borderWidth: 1.5,
     borderRadius: radius.md,
-    overflow: 'hidden',
+    position: 'relative', // Allows absolute positioning for the eye icon
   },
   inputWrapperFocused: {
     borderColor: colors.textOnDark,
@@ -136,7 +136,9 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    padding: spacing.lg,
+    height: '100%',
+    paddingLeft: spacing.lg,
+    paddingRight: 50, // Leave space on the right so text doesn't hide behind the eye icon
     color: colors.textOnDark,
     fontSize: 16,
     // @ts-ignore - web-only property, RN Web draws a native focus ring otherwise
@@ -144,9 +146,11 @@ const styles = StyleSheet.create({
     outlineWidth: 0,
   },
   eyeButton: {
-    paddingHorizontal: spacing.md,
-    width: 44,
+    position: 'absolute',
+    right: 12, // Positioned cleanly inside the right edge of the box
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: spacing.sm,
   },
 });

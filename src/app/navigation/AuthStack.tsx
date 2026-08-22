@@ -6,9 +6,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SplashScreen from '../../features/onboarding/screens/SplashScreen';
 import OnboardingScreen from '../../features/onboarding/screens/OnboardingScreen';
 import LoginScreen from '../../features/onboarding/screens/LoginScreen';
+import SignupScreen from '../../features/onboarding/screens/SignupScreen';
 import VerifyOtpScreen from '../../features/onboarding/screens/VerifyOtpScreen';
-// TODO: Uncomment once you create MpinSetupScreen
-// import MpinSetupScreen from '../../features/onboarding/screens/MpinSetupScreen';
+import ForgotPasswordScreen from '../../features/onboarding/screens/ForgotPasswordScreen';
+import ResetPasswordScreen from '../../features/onboarding/screens/ResetPasswordScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -24,8 +25,10 @@ export default function AuthStack() {
       <Stack.Screen name="Splash" component={SplashScreen as any} />
       <Stack.Screen name="Onboarding" component={OnboardingScreen as any} />
       <Stack.Screen name="Login" component={LoginScreen as any} />
-      <Stack.Screen name="Otp" component={VerifyOtpScreen as any} />
-      {/* <Stack.Screen name="MpinSetup" component={MpinSetupScreen as any} /> */}
+      <Stack.Screen name="Signup" component={SignupScreen as any} />
+      <Stack.Screen name="VerifyOtp" component={VerifyOtpScreen as any} />
+      <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen as any} />
+      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen as any} />
     </Stack.Navigator>
   );
 }
