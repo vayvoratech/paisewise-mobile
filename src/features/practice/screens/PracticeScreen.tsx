@@ -28,10 +28,16 @@ export default function PracticeScreen({ navigation }: Props) {
   const holdingsValue = useSelector((state: RootState) => state.portfolio.holdingsValue);
   const starting = 100_000; // virtual ₹1L seed
   const [stocks, setStocks] = useState<Stock[]>([]);
+  const [isMarketOpen, setIsMarketOpen] = useState(false);
   const profit = cash + holdingsValue - starting;
 
   useEffect(() => {
     marketService.getTopStocks().then(setStocks);
+    marketService.getMarketStatus().then((res) => {
+      if (res) {
+        setIsMarketOpen(res.isMarketOpen);
+      }
+    });
   }, []);
 
   return (
@@ -59,7 +65,11 @@ export default function PracticeScreen({ navigation }: Props) {
       <ScrollView style={styles.sheet} contentContainerStyle={styles.sheetContent} showsVerticalScrollIndicator={false}>
         <View style={styles.sectionHead}>
           <Text style={styles.sectionTitle}>Top Stocks</Text>
-          <Pill label="● LIVE" color={colors.green} bg={colors.greenSoft} />
+          <Pill
+            label={isMarketOpen ? "● LIVE" : "● CLOSED"}
+            color={isMarketOpen ? colors.green : colors.pink}
+            bg={isMarketOpen ? colors.greenSoft : colors.redSoft}
+          />
         </View>
 
         {stocks.map((s) => {

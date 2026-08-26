@@ -1,5 +1,5 @@
 /** Screen 03 — Home Dashboard. Greeting, stats, today's lesson, market, quick actions. */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CompositeScreenProps } from '@react-navigation/native';
@@ -16,6 +16,8 @@ import { PROFILE } from '../../profile/profile.data';
 import { TODAYS_LESSON } from '../../learn/learn.data';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../../app/store';
+import { marketService } from '../../market/market.service';
+import { Stock } from '../../market/market.types';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabsParamList, 'Home'>,
@@ -39,6 +41,24 @@ export default function HomeScreen({ navigation }: Props) {
   const holdingsValue = useSelector((state: RootState) => state.portfolio.holdingsValue);
   const gain = 4320;
   const gainPct = 4.3;
+
+  const [isMarketOpen, setIsMarketOpen] = useState(false);
+  const [gainers, setGainers] = useState<Stock[]>([]);
+  const [losers, setLosers] = useState<Stock[]>([]);
+
+  useEffect(() => {
+    marketService.getMarketStatus().then((res) => {
+      if (res) {
+        setIsMarketOpen(res.isMarketOpen);
+      }
+    });
+    marketService.getTopMovers().then((res) => {
+      if (res) {
+        setGainers(res.gainers.slice(0, 3));
+        setLosers(res.losers.slice(0, 3));
+      }
+    });
+  }, []);
 
   return (
     <View style={styles.root}>
@@ -118,19 +138,63 @@ export default function HomeScreen({ navigation }: Props) {
         {/* Market now */}
         <View style={[styles.sectionHead, { marginTop: spacing.xl }]}>
           <Text style={styles.sectionTitle}>Market Now</Text>
-          <Pill label="● LIVE" color={colors.green} bg={colors.greenSoft} />
+          <Pill
+            label={isMarketOpen ? "● LIVE" : "● CLOSED"}
+            color={isMarketOpen ? colors.green : colors.pink}
+            bg={isMarketOpen ? colors.greenSoft : colors.redSoft}
+          />
         </View>
+        <Text style={{ ...typography.overline, color: colors.textMuted, marginBottom: spacing.sm }}>
+          TOP GAINERS
+        </Text>
         <View style={styles.marketRow}>
-          {MARKET.map((m) => (
-            <Card key={m.symbol} style={styles.marketCard}>
-              <Text style={styles.marketSym}>{m.symbol}</Text>
-              <Text style={styles.marketVal}>{formatINR(m.value)}</Text>
-              <Text style={[styles.marketPct, { color: m.pct >= 0 ? colors.green : colors.pink }]}>
-                {m.pct >= 0 ? '↑' : '↓'} {Math.abs(m.pct)}%
-              </Text>
-            </Card>
-          ))}
+          {gainers.length > 0 ? (
+            gainers.map((m) => {
+              const up = m.changePct >= 0;
+              return (
+                <Card key={m.symbol} style={styles.marketCard}>
+                  <Text style={styles.marketSym}>{m.symbol.replace("NSE:", "")}</Text>
+                  <Text style={styles.marketVal}>{formatINR(m.price)}</Text>
+                  <Text style={[styles.marketPct, { color: up ? colors.green : colors.pink }]}>
+                    {up ? '↑' : '↓'} {Math.abs(m.changePct).toFixed(2)}%
+                  </Text>
+                </Card>
+              );
+            })
+          ) : (
+            MARKET.map((m) => (
+              <Card key={m.symbol} style={styles.marketCard}>
+                <Text style={styles.marketSym}>{m.symbol}</Text>
+                <Text style={styles.marketVal}>{formatINR(m.value)}</Text>
+                <Text style={[styles.marketPct, { color: m.pct >= 0 ? colors.green : colors.pink }]}>
+                  {m.pct >= 0 ? '↑' : '↓'} {Math.abs(m.pct)}%
+                </Text>
+              </Card>
+            ))
+          )}
         </View>
+
+        {losers.length > 0 && (
+          <>
+            <Text style={{ ...typography.overline, color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm }}>
+              TOP LOSERS
+            </Text>
+            <View style={styles.marketRow}>
+              {losers.map((m) => {
+                const up = m.changePct >= 0;
+                return (
+                  <Card key={m.symbol} style={styles.marketCard}>
+                    <Text style={styles.marketSym}>{m.symbol.replace("NSE:", "")}</Text>
+                    <Text style={styles.marketVal}>{formatINR(m.price)}</Text>
+                    <Text style={[styles.marketPct, { color: up ? colors.green : colors.pink }]}>
+                      {up ? '↑' : '↓'} {Math.abs(m.changePct).toFixed(2)}%
+                    </Text>
+                  </Card>
+                );
+              })}
+            </View>
+          </>
+        )}
 
         {/* Quick actions */}
         <Text style={[styles.sectionTitle, { marginTop: spacing.xl, marginBottom: spacing.md }]}>Quick Actions</Text>

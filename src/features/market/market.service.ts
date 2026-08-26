@@ -48,4 +48,26 @@ export const marketService = {
       return [];
     }
   },
+
+  async getMarketStatus(): Promise<{ isMarketOpen: boolean; session: string; nextSessionTime: string } | undefined> {
+    try {
+      const headers = await getHeaders();
+      const response = await axios.get(`${BASE_URL}/market/status`, { headers });
+      return response.data;
+    } catch (error) {
+      console.warn('Failed to fetch market status from backend:', error);
+      return undefined;
+    }
+  },
+
+  async getTopMovers(): Promise<{ gainers: Stock[]; losers: Stock[] } | undefined> {
+    try {
+      const headers = await getHeaders();
+      const response = await axios.get(`${BASE_URL}/market/top-movers`, { headers });
+      return response.data;
+    } catch (error) {
+      console.warn('Failed to fetch top movers from backend:', error);
+      return undefined;
+    }
+  },
 };
