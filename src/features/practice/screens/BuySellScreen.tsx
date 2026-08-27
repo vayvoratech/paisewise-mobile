@@ -12,7 +12,7 @@ import { formatINR } from '../../../shared/format';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { marketService } from '../../market/market.service';
 import { Stock } from '../../market/market.types';
-import { buyStock, sellStock } from '../../portfolio/slices/portfolioSlice'; // Import sellStock action
+import { buyStock, sellStock } from '../../portfolio/slices/portfolioSlice';
 import { addLocalOrder } from '../slices/orderSlice';
 import type { RootState, AppDispatch } from '../../../app/store';
 import mixpanel from '@core/mixpanel';
@@ -33,26 +33,49 @@ export default function BuySellScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     marketService.getStock(symbol).then((s) => {
-      if (s) {
-        setStock(s);
+      const targetStock = s || {
+        symbol: symbol,
+        name: symbol === 'NIFTY' ? 'NIFTY 50 Index' : symbol,
+        price: symbol === 'NIFTY' ? 22456.00 : 1000,
+        changePct: 0.5,
+        emoji: '📈'
+      };
+      setStock(targetStock as any);
+
+      // Track modal opened once stock details are loaded
+       const rawPrice: any = targetStock.price ?? 0;
+       const safeLtp = typeof rawPrice === 'string' 
+        ? parseFloat(rawPrice.replace(/[^0-9.]/g, '')) 
+         : Number(rawPrice);
+
+      if (isBuyMode) {
+        mixpanel.track('buy_modal_opened', {
+          symbol: targetStock.symbol,
+          company_name: targetStock.name || symbol,
+          current_ltp: isNaN(safeLtp) ? 0 : safeLtp,
+          source: 'watchlist',
+          is_paper: true,
+          available_balance: cash,
+        });
       } else {
-        // Fallback for custom indices like NIFTY if service misses them
-        setStock({
-          symbol: symbol,
-          name: symbol === 'NIFTY' ? 'NIFTY 50 Index' : symbol,
-          price: symbol === 'NIFTY' ? 22456.00 : 1000,
-          changePct: 0.5,
-          emoji: '📈'
-        } as any);
+        mixpanel.track('sell_modal_opened', {
+          symbol: targetStock.symbol,
+          company_name: targetStock.name || symbol,
+          current_ltp: isNaN(safeLtp) ? 0 : safeLtp,
+          source: 'portfolio',
+          is_paper: true,
+          quantity_owned: qty, // or actual quantity from portfolio if available
+        });
       }
     }).catch(() => {
-      setStock({
+      const fallbackStock = {
         symbol: symbol,
         name: symbol,
         price: 22456.00,
         changePct: 0.0,
         emoji: '📊'
-      } as any);
+      };
+      setStock(fallbackStock as any);
     });
   }, [symbol]);
 
@@ -71,32 +94,41 @@ export default function BuySellScreen({ navigation, route }: Props) {
   const up = stock.changePct >= 0;
 
   const handleOrderTypeChange = (t: OrderType) => {
+    const previousType = orderType;
     setOrderType(t);
     mixpanel.track('order_type_selected', {
-      order_type: t,
       symbol: stock.symbol,
+      order_type: t,
+      order_type_previous: previousType,
     });
   };
 
   const handleQuantityChange = (newQty: number) => {
+    const previousQty = qty;
     setQty(newQty);
     mixpanel.track('quantity_changed', {
       symbol: stock.symbol,
       quantity: newQty,
-      total_cost: Math.round(safePrice * newQty),
+      quantity_previous: previousQty,
+      input_method: 'stepper',
     });
   };
 
   const onConfirm = () => {
     const totalAmount = Math.round(safePrice * qty);
-    const xpEarned = 25;
+    const clientOrderId = `client_ord_${Date.now()}`;
+    const orderId = `ord_${Date.now()}`;
 
     mixpanel.track('paper_order_confirmed', {
       symbol: stock!.symbol,
-      order_mode: mode,
+      side: isBuyMode ? 'BUY' : 'SELL',
       order_type: orderType,
-      shares: qty,
-      total_amount: totalAmount,
+      quantity: qty,
+      price: safePrice,
+      total_value: totalAmount,
+      is_paper: true,
+      client_order_id: clientOrderId,
+      balance_after_estimate: cash - (isBuyMode ? totalAmount : -totalAmount),
     });
 
     // BRANCH: Dispatch either buyStock or sellStock based on mode
@@ -109,7 +141,6 @@ export default function BuySellScreen({ navigation, route }: Props) {
         price: safePrice,
       }));
     } else {
-      // Dispatch sell action to update portfolio holdings and increase cash
       dispatch(sellStock({
         symbol: stock!.symbol,
         shares: qty,
@@ -127,26 +158,27 @@ export default function BuySellScreen({ navigation, route }: Props) {
     }));
 
     mixpanel.track('paper_order_placed', {
+      order_id: orderId,
+      client_order_id: clientOrderId,
       symbol: stock!.symbol,
-      order_mode: mode,
-      shares: qty,
-      price: safePrice,
-      total_amount: totalAmount,
+      side: isBuyMode ? 'BUY' : 'SELL',
+      quantity: qty,
+      fill_price: safePrice,
+      total_value: totalAmount,
+      is_paper: true,
+      time_to_confirm_ms: 120, // Estimated confirmation delay
     });
 
-    // Option A: If navigating to TradeSuccess, you can also pop stack or handle from there.
-    // Alternatively, use popToTop() to instantly clear stack and safely take the user back to the root Watchlist/Home screen:
     try {
       navigation.replace('TradeSuccess', {
         symbol: stock!.symbol,
         shares: qty,
         pricePerShare: safePrice,
         totalPaid: totalAmount,
-        xpEarned,
+        xpEarned: 25,
         mode,
       });
     } catch {
-      // Fallback reset if TradeSuccess isn't found in stack
       navigation.popToTop();
     }
   };

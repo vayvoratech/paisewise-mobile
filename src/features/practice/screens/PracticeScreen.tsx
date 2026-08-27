@@ -13,7 +13,7 @@ import { formatINR } from '../../../shared/format';
 import { MainTabsParamList, RootStackParamList } from '../../../app/navigation/types';
 import { marketService } from '../../market/market.service';
 import { Stock } from '../../market/market.types';
-import mixpanel from '@core/mixpanel'; // Import mixpanel
+import mixpanel from '@core/mixpanel';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabsParamList, 'Practice'>,
@@ -23,36 +23,54 @@ type Props = CompositeScreenProps<
 export default function PracticeScreen({ navigation }: Props) {
   const [stocks, setStocks] = useState<Stock[]>([]);
 
-  // Track practice_screen_viewed when the Practice tab/screen loads
+  // Track practice_screen_viewed once on mount with fixed dependency array
   useEffect(() => {
     mixpanel.track('practice_screen_viewed', {
-      device_type: Platform.OS,
+      available_balance: 100000,
+      holdings_count: 0,
+      unrealized_pnl: 0,
     });
     marketService.getTopStocks().then(setStocks);
   }, []);
 
   const handleStockTap = (stock: Stock) => {
+    const rawPrice: any = stock.price ?? 0;
+    const ltp = typeof rawPrice === 'string' ? parseFloat(rawPrice.replace(/[^0-9.]/g, '')) : Number(rawPrice);
+
     mixpanel.track('stock_tapped', {
       symbol: stock.symbol,
-      stock_name: stock.name,
-      price: stock.price,
+      company_name: stock.name,
+      source: 'practice_screen',
+      ltp: isNaN(ltp) ? 0 : ltp,
     });
   };
 
   const handleBuyPress = (stock: Stock) => {
+    const rawPrice: any = stock.price ?? 0;
+    const ltpValue = typeof rawPrice === 'string' ? parseFloat(rawPrice.replace(/[^0-9.]/g, '')) : Number(rawPrice);
+
     mixpanel.track('buy_modal_opened', {
       symbol: stock.symbol,
-      price: stock.price,
+      company_name: stock.name,
+      current_ltp: isNaN(ltpValue) ? 0 : ltpValue,
       source: 'practice_screen',
+      is_paper: true,
+      available_balance: 100000,
     });
     navigation.navigate('BuySell', { symbol: stock.symbol, mode: 'buy' } as any);
   };
 
   const handleSellPress = (stock: Stock) => {
+    const rawPrice: any = stock.price ?? 0;
+    const ltpValue = typeof rawPrice === 'string' ? parseFloat(rawPrice.replace(/[^0-9.]/g, '')) : Number(rawPrice);
+
     mixpanel.track('sell_modal_opened', {
       symbol: stock.symbol,
-      price: stock.price,
+      company_name: stock.name,
+      current_ltp: isNaN(ltpValue) ? 0 : ltpValue,
       source: 'practice_screen',
+      is_paper: true,
+      quantity_owned: 5,
     });
     navigation.navigate('BuySell', { symbol: stock.symbol, mode: 'sell' } as any);
   };
