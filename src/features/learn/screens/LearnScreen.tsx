@@ -11,7 +11,7 @@ import { ProgressBar } from '../../../shared/ui/ProgressBar';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { MainTabsParamList, RootStackParamList } from '../../../app/navigation/types';
 import { TODAYS_LESSON } from '../learn.data';
-import mixpanel from '@core/mixpanel';
+import { Analytics } from '../../../core/analyticsService'; // ✅ Import your analytics service
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabsParamList, 'Learn'>,
@@ -27,21 +27,28 @@ const CHAPTERS = [
 
 export default function LearnScreen({ navigation }: Props) {
   useEffect(() => {
-    mixpanel.track('lesson_list_viewed', {
-      screen_name: 'LearnScreen',
-      device_type: Platform.OS,
-    });
-  }, []);
+  Analytics.lessonListViewed({
+    sessionId: 'sess_abc123',
+    chapterId: 'chap_1', // or your dynamic chapter id state/prop
+    chapterName: 'Introduction to Finance',
+    lessonsTotal: 5,
+    lessonsCompleted: 2,
+    language: 'en',
+  });
+}, []);
 
   const handleLessonPress = (lessonId: string, lessonTitle: string, chapterNo: number) => {
-    mixpanel.track('lesson_tapped', {
-      lesson_id: lessonId,
-      lesson_title: lessonTitle,
-      chapter_number: chapterNo,
-    });
+  Analytics.lessonTapped({
+    sessionId: 'sess_abc123',
+    lessonId: lessonId,
+    lessonTitle: lessonTitle,
+    lessonOrder: chapterNo, // or map to the correct property defined in your service
+    lessonStatus: 'available',
+    sourcePosition: 1,
+  });
 
-    navigation.navigate('Lesson', { lessonId });
-  };
+  navigation.navigate('Lesson', { lessonId });
+};
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>

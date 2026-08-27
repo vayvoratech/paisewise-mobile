@@ -1,6 +1,6 @@
 /** Screens 04 + 05 — Lesson Screen with tappable jargon words and quiz CTA. */
 import React, { useEffect, useRef } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, NativeSyntheticEvent, NativeScrollEvent, Platform } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,7 +11,7 @@ import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { TODAYS_LESSON } from '../learn.data';
 import { JargonText } from '../components/JargonText';
-import mixpanel from '@core/mixpanel'; // Import mixpanel
+import { Analytics } from '../../../core/analyticsService'; // Import your Analytics service
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Lesson'>;
 
@@ -21,21 +21,33 @@ export default function LessonScreen({ navigation }: Props) {
   // Track scroll depth milestones (25%, 50%, 75%, 100%)
   const milestonesFired = useRef({ 25: false, 50: false, 75: false, 100: false });
 
-  // Track lesson_started when the screen opens
+  // Track lesson_started using your Analytics service
   useEffect(() => {
-    mixpanel.track('lesson_started', {
-      lesson_id: lesson.id,
-      lesson_title: lesson.title,
-      chapter_number: lesson.chapterNo,
-      device_type: Platform.OS,
+    Analytics.lessonStarted({
+      sessionId: 'sess_abc123', // Replace with your active session ID variable/state
+      lessonId: lesson.id,
+      lessonTitle: lesson.title,
+      chapterId: `chap_${lesson.chapterNo}`,
+      chapterName: lesson.chapter,
+      lessonOrder: lesson.index,
+      language: 'en',
+      totalBlocks: lesson.segments.length,
+      isResume: false,
+      resumeBlockIndex: 0,
+      estimatedMinutes: 3,
     });
   }, [lesson]);
 
   const openJargon = (term: string) => {
-    // Track jargon_term_tapped event
-    mixpanel.track('jargon_term_tapped', {
+    // Track jargon_term_tapped event using your Analytics service
+    Analytics.jargonTermTapped({
+      sessionId: 'sess_abc123',
+      lessonId: lesson.id,
       term: term,
-      lesson_id: lesson.id,
+      termDisplay: term,
+      language: 'en',
+      blockIndex: 0,
+      tapCountInLesson: 1,
     });
     navigation.navigate('JargonBuster', { term });
   };
@@ -49,18 +61,26 @@ export default function LessonScreen({ navigation }: Props) {
     ([25, 50, 75, 100] as const).forEach((milestone) => {
       if (percentage >= milestone && !milestonesFired.current[milestone]) {
         milestonesFired.current[milestone] = true;
-        mixpanel.track('lesson_content_scrolled', {
-          lesson_id: lesson.id,
-          scroll_depth_percentage: milestone,
+        // Track lesson content scrolled using your Analytics service
+        Analytics.lessonContentScrolled({
+          sessionId: 'sess_abc123',
+          lessonId: lesson.id,
+          scrollDepthPct: milestone,
+          currentBlockIndex: 0,
+          timeElapsedSeconds: Math.round(Date.now() / 1000),
         });
       }
     });
   };
 
   const handleQuizPress = () => {
-    mixpanel.track('quiz_started', {
-      source: 'lesson_cta',
-      lesson_id: lesson.id,
+    // Track quiz started using your Analytics service
+    Analytics.quizStarted({
+      sessionId: 'sess_abc123',
+      lessonId: lesson.id,
+      attemptNumber: 1,
+      totalQuestions: 5,
+      language: 'en',
     });
     navigation.navigate('Quiz');
   };

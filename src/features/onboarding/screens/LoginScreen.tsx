@@ -23,7 +23,8 @@ import { RootStackParamList } from '../../../app/navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch } from 'react-redux';
 import { loginUser } from '../slices/authSlice';
-import mixpanel from '@core/mixpanel'; // Import mixpanel instance
+import mixpanel from '@core/mixpanel';
+import { Analytics } from '../../../core/analyticsService'; 
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -49,34 +50,28 @@ export default function LoginScreen({ navigation }: Props) {
     if (password.length < 4) return setError('Enter your password.');
 
     setLoading(true);
-
-    // Secure identifier mapping for tracking (last 4 digits if phone, or domain/type if email)
-    const identifierProperty = isPhone 
-      ? { phone_last4: id.slice(-4) } 
-      : { email_domain: id.split('@')[1] || 'unknown' };
-
-    // 1. Track login_submitted event
-    mixpanel.track('login_submitted', {
-      login_method: isPhone ? 'phone' : 'email',
-      ...identifierProperty,
-    });
+    const startTime = Date.now(); // Track time taken to log in
 
     try {
-      // Correctly map identifier to match backend DTO expectation ('phone' or 'email')
       const payload = isPhone ? { phone: id, password } : { email: id, password };
 
-      // Dispatch Redux thunk to log in and save tokens automatically
+      // Dispatch Redux thunk to log in
       const resultAction = await dispatch(loginUser(payload) as any).unwrap();
 
       setLoading(false);
 
       const userId = resultAction?.userId || resultAction?.user?.id || 'unknown_user_id';
+      const timeToLogin = Math.round((Date.now() - startTime) / 1000);
 
-      // 2. Identify user and track login_success event
+      // Identify user in Mixpanel
       mixpanel.identify(userId);
-      mixpanel.track('login_success', {
-        login_method: isPhone ? 'phone' : 'email',
-        ...identifierProperty,
+
+      // ✅ 1. Track login_success using the exact spec properties
+      Analytics.loginSuccess({
+        sessionId: 'sess_abc123', // Replace with your app's actual active session ID state/variable
+        loginMethod: isPhone ? 'phone' : 'email',
+        timeToLoginSeconds: timeToLogin,
+        daysSinceLastLogin: 1, // Update this if you store last login days in MMKV/AsyncStorage
       });
 
       navigation.replace('MainTabs', { screen: 'Home' });
@@ -85,14 +80,16 @@ export default function LoginScreen({ navigation }: Props) {
 
       const errorMessage = typeof err === 'string' ? err : err?.message || '';
       const failureReason = errorMessage.toLowerCase().includes('not found') 
-        ? 'user_not_found' 
-        : 'invalid_credentials';
+        ? 'account_locked' 
+        : 'wrong_password';
 
-      // 3. Track login_failed event
-      mixpanel.track('login_failed', {
-        login_method: isPhone ? 'phone' : 'email',
-        failure_reason: failureReason,
-        ...identifierProperty,
+      // ✅ 2. Track login_failed using the exact spec properties
+      Analytics.loginFailed({
+        sessionId: 'sess_abc123', // Replace with your active session ID variable
+        loginMethod: isPhone ? 'phone' : 'email',
+        attemptNumber: 1,
+        attemptsRemaining: 2,
+        failureReason: failureReason === 'account_locked' ? 'account_locked' : 'wrong_password',
       });
 
       setError(errorMessage || 'Could not log in right now. Please try again.');

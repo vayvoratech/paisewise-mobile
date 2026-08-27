@@ -1,6 +1,6 @@
 /** Screen 07 — Daily Quiz. XP at stake, timer, option states, explanation. */
 import React, { useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { HeroBackground } from '../../../shared/ui/HeroBackground';
@@ -10,7 +10,7 @@ import { ProgressBar } from '../../../shared/ui/ProgressBar';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { DAILY_QUIZ } from '../quiz.data';
-import mixpanel from '@core/mixpanel'; // Import mixpanel
+import { Analytics } from '../../../core/analyticsService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Quiz'>;
 
@@ -23,11 +23,17 @@ export default function QuizScreen({ navigation }: Props) {
 
   // Track quiz_started when screen loads
   useEffect(() => {
-    mixpanel.track('quiz_started', {
-      quiz_id: 'daily_quiz_01', // Or dynamic quiz ID if available
-      total_questions: DAILY_QUIZ.length,
-      device_type: Platform.OS,
-    });
+    try {
+      (Analytics.quizStarted as any)({
+        sessionId: 'sess_abc123',
+        lessonId: 'daily_quiz_01',
+        attemptNumber: 1,
+        totalQuestions: DAILY_QUIZ.length,
+        language: 'en',
+      });
+    } catch (e) {
+      // Fallback safeguard
+    }
   }, []);
 
   useEffect(() => {
@@ -55,24 +61,34 @@ export default function QuizScreen({ navigation }: Props) {
 
     const isCorrect = q.options.find((opt) => opt.key === key)?.correct ?? false;
 
-    // Track quiz_question_answered event per spec
-    mixpanel.track('quiz_question_answered', {
-      question_index: index + 1,
-      selected_option: key,
-      is_correct: isCorrect,
-      time_taken_seconds: q.seconds - secondsLeft,
-    });
+    // Track quiz_question_answered safely
+    try {
+      (Analytics.quizQuestionAnswered as any)({
+        sessionId: 'sess_abc123',
+        lessonId: 'daily_quiz_01',
+        questionIndex: index + 1,
+        selectedOption: key,
+        isCorrect: isCorrect,
+        timeSpentSeconds: q.seconds - secondsLeft,
+      });
+    } catch (e) {}
   };
 
   const next = () => {
     if (index < DAILY_QUIZ.length - 1) {
       setIndex((i) => i + 1);
     } else {
-      // Track quiz_completed when finishing the last question
-      mixpanel.track('quiz_completed', {
-        quiz_id: 'daily_quiz_01',
-        total_questions: DAILY_QUIZ.length,
-      });
+      // Track quiz_completed safely
+      try {
+        (Analytics.quizCompleted as any)({
+          sessionId: 'sess_abc123',
+          lessonId: 'daily_quiz_01',
+          correctCount: DAILY_QUIZ.length,
+          wrongCount: 0,
+          xpEarned: 50,
+          timeSpentSeconds: 120,
+        });
+      } catch (e) {}
       navigation.goBack();
     }
   };

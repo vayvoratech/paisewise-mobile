@@ -1,5 +1,5 @@
 /** Screen 10 — Jargon Buster (bottom-sheet modal). Plain-English term explainer. */
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -8,11 +8,47 @@ import { Pill } from '../../../shared/ui/Pill';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { JARGON } from '../learn.data';
+import { Analytics } from '../../../core/analyticsService'; // Adjust path if needed
 
 type Props = NativeStackScreenProps<RootStackParamList, 'JargonBuster'>;
 
 export default function JargonBusterScreen({ navigation, route }: Props) {
-  const term = JARGON[route.params.term];
+  const termKey = route.params.term;
+  const term = JARGON[termKey];
+  
+  // Track open time to calculate how long the sheet was open
+  const openTimeRef = useRef(Date.now());
+
+  useEffect(() => {
+    if (term) {
+      Analytics.jargonTermTapped({
+        sessionId: 'sess_abc123', // Replace with your active session ID variable/state
+        lessonId: 'lesson_current', // Pass actual active lesson ID if available in route/params
+        term: termKey,
+        termDisplay: term.term,
+        language: 'en',
+        blockIndex: 0,
+        tapCountInLesson: 1,
+      });
+    }
+  }, [termKey]);
+
+  const handleClose = (closeMethod: string) => {
+    const timeOpenSeconds = Math.round((Date.now() - openTimeRef.current) / 1000);
+
+    if (term) {
+    
+      Analytics.jargonSheetClosed({
+        sessionId: 'sess_abc123', // Replace with active session ID
+        lessonId: 'lesson_current', // Pass actual lesson ID
+        term: termKey,
+        timeOpenSeconds: timeOpenSeconds,
+        closeMethod: closeMethod, // e.g., 'button_tap' or 'background_dismiss'
+      });
+    }
+
+    navigation.goBack();
+  };
 
   if (!term) {
     return (
@@ -45,7 +81,7 @@ export default function JargonBusterScreen({ navigation, route }: Props) {
         </ScrollView>
 
         <SafeAreaView edges={['bottom']}>
-          <Button label="Got it! ✓ Back to lesson" variant="dark" onPress={() => navigation.goBack()} />
+          <Button label="Got it! ✓ Back to lesson" variant="dark" onPress={() => handleClose('button_tap')} />
         </SafeAreaView>
       </View>
     </View>
