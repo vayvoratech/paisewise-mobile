@@ -7,7 +7,6 @@ import learnReducer from '../features/learn/slices/learnSlice';
 import orderReducer from '../features/practice/slices/orderSlice';
 
 export const store = configureStore({
-<<<<<<< HEAD
   reducer: {
     auth: authReducer,
     user: userReducer,
@@ -20,17 +19,3 @@ export const store = configureStore({
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
-=======
- reducer: {
-   auth: authReducer,
-   user: userReducer,
-   market: marketReducer,
-   portfolio: portfolioReducer,
-   learn: learnReducer,
-   order: orderReducer,
- },
-});
-
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
->>>>>>> origin/develop
