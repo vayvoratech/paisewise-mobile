@@ -49,7 +49,7 @@ export default function ForgotPasswordScreen({ route, navigation }: { route: any
         }
         setError('Failed to send OTP. Please try again later.');
     }
-};
+  };
 
   return (
     <HeroBackground tone="navy">

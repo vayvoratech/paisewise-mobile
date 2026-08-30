@@ -10,6 +10,7 @@ import { ProgressBar } from '../../../shared/ui/ProgressBar';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { DAILY_QUIZ } from '../quiz.data';
+import { Analytics } from '../../../core/analyticsService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Quiz'>;
 
@@ -19,6 +20,21 @@ export default function QuizScreen({ navigation }: Props) {
   const q = DAILY_QUIZ[index];
   const [secondsLeft, setSecondsLeft] = useState(q.seconds);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Track quiz_started when screen loads
+  useEffect(() => {
+    try {
+      (Analytics.quizStarted as any)({
+        sessionId: 'sess_abc123',
+        lessonId: 'daily_quiz_01',
+        attemptNumber: 1,
+        totalQuestions: DAILY_QUIZ.length,
+        language: 'en',
+      });
+    } catch (e) {
+      // Fallback safeguard
+    }
+  }, []);
 
   useEffect(() => {
     setSecondsLeft(q.seconds);
@@ -42,11 +58,39 @@ export default function QuizScreen({ navigation }: Props) {
     if (answered) return;
     setPicked(key);
     if (timerRef.current) clearInterval(timerRef.current);
+
+    const isCorrect = q.options.find((opt) => opt.key === key)?.correct ?? false;
+
+    // Track quiz_question_answered safely
+    try {
+      (Analytics.quizQuestionAnswered as any)({
+        sessionId: 'sess_abc123',
+        lessonId: 'daily_quiz_01',
+        questionIndex: index + 1,
+        selectedOption: key,
+        isCorrect: isCorrect,
+        timeSpentSeconds: q.seconds - secondsLeft,
+      });
+    } catch (e) {}
   };
 
   const next = () => {
-    if (index < DAILY_QUIZ.length - 1) setIndex((i) => i + 1);
-    else navigation.goBack();
+    if (index < DAILY_QUIZ.length - 1) {
+      setIndex((i) => i + 1);
+    } else {
+      // Track quiz_completed safely
+      try {
+        (Analytics.quizCompleted as any)({
+          sessionId: 'sess_abc123',
+          lessonId: 'daily_quiz_01',
+          correctCount: DAILY_QUIZ.length,
+          wrongCount: 0,
+          xpEarned: 50,
+          timeSpentSeconds: 120,
+        });
+      } catch (e) {}
+      navigation.goBack();
+    }
   };
 
   return (

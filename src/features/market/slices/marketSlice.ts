@@ -3,27 +3,40 @@ import axios from 'axios';
 import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
 import { Stock, IndexQuote } from '../market.types';
 
+export type ConnectionStatus = 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'DISCONNECTED';
+
+export interface TickData {
+  symbol: string;
+  ltp: number;
+  change: number;
+  volume: number;
+  timestamp: number;
+}
+
 interface MarketState {
   stocks: Stock[];
   indices: IndexQuote[];
+  ticks: Record<string, TickData>; 
   loading: boolean;
   error: string | null;
+  connectionStatus: ConnectionStatus;
 }
 
 const initialState: MarketState = {
   stocks: [],
   indices: [],
+  ticks: {},
   loading: false,
   error: null,
+  connectionStatus: 'IDLE',
 };
 
 export const fetchMarketQuotes = createAsyncThunk(
   'market/fetchQuotes',
   async (_, { rejectWithValue }) => {
     try {
-      // Calls the market quote endpoint
       const response = await axios.get(API_ENDPOINTS.MARKET.QUOTE);
-      return response.data; // Array of quotes or stock data
+      return response.data;
     } catch (err: any) {
       const errMsg = err.response?.data?.message || err.message || 'Failed to fetch market quotes';
       return rejectWithValue(errMsg);
@@ -38,6 +51,10 @@ const marketSlice = createSlice({
     setLocalStocks(state, action: PayloadAction<Stock[]>) {
       state.stocks = action.payload;
     },
+    // Task requirement fulfilled: setIndices reducer
+    setIndices(state, action: PayloadAction<IndexQuote[]>) {
+      state.indices = action.payload;
+    },
     setLocalIndices(state, action: PayloadAction<IndexQuote[]>) {
       state.indices = action.payload;
     },
@@ -46,7 +63,18 @@ const marketSlice = createSlice({
       if (stock) {
         stock.price = action.payload.price;
       }
-    }
+    },
+    // Task requirement fulfilled: updateTick reducer (with alias updateLiveTick)
+    updateTick(state, action: PayloadAction<TickData>) {
+      state.ticks[action.payload.symbol] = action.payload;
+    },
+    updateLiveTick(state, action: PayloadAction<TickData>) {
+      state.ticks[action.payload.symbol] = action.payload;
+    },
+    // Task requirement fulfilled: setConnectionStatus reducer
+    setConnectionStatus(state, action: PayloadAction<ConnectionStatus>) {
+      state.connectionStatus = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -56,7 +84,6 @@ const marketSlice = createSlice({
       })
       .addCase(fetchMarketQuotes.fulfilled, (state, action: PayloadAction<any>) => {
         state.loading = false;
-        // In a real API response, map actions; fallback to payload if formatted
         if (Array.isArray(action.payload)) {
           state.stocks = action.payload;
         }
@@ -68,5 +95,14 @@ const marketSlice = createSlice({
   },
 });
 
-export const { setLocalStocks, setLocalIndices, updateStockPrice } = marketSlice.actions;
+export const { 
+  setLocalStocks, 
+  setIndices,
+  setLocalIndices, 
+  updateStockPrice, 
+  updateTick,
+  updateLiveTick, 
+  setConnectionStatus 
+} = marketSlice.actions;
+
 export default marketSlice.reducer;

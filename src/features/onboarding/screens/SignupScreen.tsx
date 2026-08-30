@@ -9,6 +9,7 @@ import { RootStackParamList } from '../../../app/navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch } from 'react-redux';
 import { registerUser } from '../slices/authSlice';
+import mixpanel from '@core/mixpanel'; // Import mixpanel instance
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Signup'>;
 
@@ -85,10 +86,19 @@ export default function SignupScreen({ navigation }: Props) {
 
     setLoading(true);
 
+    const trimmedPhone = phone.trim();
+    const phoneLast4 = trimmedPhone.slice(-4); // Securely extract last 4 digits per spec
+
+    // 1. Track registration_submitted event
+    mixpanel.track('registration_submitted', {
+      phone_last4: phoneLast4,
+      password_strength: 'medium',
+    });
+
     try {
       // Matches RegisterRequest DTO: phone, name, email, password, confirmPassword
       const payload = {
-        phone: phone.trim(),
+        phone: trimmedPhone,
         name: name.trim(),
         email: email.trim(),
         password,
@@ -96,13 +106,36 @@ export default function SignupScreen({ navigation }: Props) {
       };
 
       // Dispatch Redux thunk to register and save tokens
-      await dispatch(registerUser(payload) as any).unwrap();
+      const resultAction = await dispatch(registerUser(payload) as any).unwrap();
 
       setLoading(false);
+
+      // Extract user ID from result/response if available
+      const userId = resultAction?.userId || resultAction?.user?.id || 'unknown_user_id';
+
+      // 2. Identify user & track registration_success event
+      mixpanel.identify(userId);
+      mixpanel.track('registration_success', {
+        phone_last4: phoneLast4,
+        is_new_user: true,
+      });
+
       navigation.replace('Onboarding');
     } catch (err: any) {
       setLoading(false);
-      setError(err || 'Could not create account. Please check your details and try again.');
+
+      // 3. Determine failure reason and track registration_failed event
+      const errorMessage = typeof err === 'string' ? err : err?.message || '';
+      const failureReason = errorMessage.toLowerCase().includes('exist') 
+        ? 'phone_exists' 
+        : 'server_error';
+
+      mixpanel.track('registration_failed', {
+        phone_last4: phoneLast4,
+        failure_reason: failureReason,
+      });
+
+      setError(errorMessage || 'Could not create account. Please check your details and try again.');
     }
   };
 
@@ -314,7 +347,7 @@ const styles = StyleSheet.create({
     color: colors.pink,
     marginTop: spacing.xs,
   },
-  hint: {
+    hint: {
     ...typography.caption,
     color: colors.textFaint,
     marginTop: -spacing.sm,

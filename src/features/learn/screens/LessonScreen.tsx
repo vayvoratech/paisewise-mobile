@@ -1,6 +1,6 @@
 /** Screens 04 + 05 — Lesson Screen with tappable jargon words and quiz CTA. */
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,16 +11,88 @@ import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { TODAYS_LESSON } from '../learn.data';
 import { JargonText } from '../components/JargonText';
+import { Analytics } from '../../../core/analyticsService'; // Import your Analytics service
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Lesson'>;
 
 export default function LessonScreen({ navigation }: Props) {
   const lesson = TODAYS_LESSON;
-  const openJargon = (term: string) => navigation.navigate('JargonBuster', { term });
+  
+  // Track scroll depth milestones (25%, 50%, 75%, 100%)
+  const milestonesFired = useRef({ 25: false, 50: false, 75: false, 100: false });
+
+  // Track lesson_started using your Analytics service
+  useEffect(() => {
+    Analytics.lessonStarted({
+      sessionId: 'sess_abc123', // Replace with your active session ID variable/state
+      lessonId: lesson.id,
+      lessonTitle: lesson.title,
+      chapterId: `chap_${lesson.chapterNo}`,
+      chapterName: lesson.chapter,
+      lessonOrder: lesson.index,
+      language: 'en',
+      totalBlocks: lesson.segments.length,
+      isResume: false,
+      resumeBlockIndex: 0,
+      estimatedMinutes: 3,
+    });
+  }, [lesson]);
+
+  const openJargon = (term: string) => {
+    // Track jargon_term_tapped event using your Analytics service
+    Analytics.jargonTermTapped({
+      sessionId: 'sess_abc123',
+      lessonId: lesson.id,
+      term: term,
+      termDisplay: term,
+      language: 'en',
+      blockIndex: 0,
+      tapCountInLesson: 1,
+    });
+    navigation.navigate('JargonBuster', { term });
+  };
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const paddingToBottom = 20;
+    const scrollProgress = (contentOffset.y + layoutMeasurement.height) / (contentSize.height - paddingToBottom);
+    const percentage = Math.min(Math.max(scrollProgress * 100, 0), 100);
+
+    ([25, 50, 75, 100] as const).forEach((milestone) => {
+      if (percentage >= milestone && !milestonesFired.current[milestone]) {
+        milestonesFired.current[milestone] = true;
+        // Track lesson content scrolled using your Analytics service
+        Analytics.lessonContentScrolled({
+          sessionId: 'sess_abc123',
+          lessonId: lesson.id,
+          scrollDepthPct: milestone,
+          currentBlockIndex: 0,
+          timeElapsedSeconds: Math.round(Date.now() / 1000),
+        });
+      }
+    });
+  };
+
+  const handleQuizPress = () => {
+    // Track quiz started using your Analytics service
+    Analytics.quizStarted({
+      sessionId: 'sess_abc123',
+      lessonId: lesson.id,
+      attemptNumber: 1,
+      totalQuestions: 5,
+      language: 'en',
+    });
+    navigation.navigate('Quiz');
+  };
 
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.content} 
+        showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={400}
+      >
         {/* Purple lesson header */}
         <LinearGradient colors={[colors.purple, colors.purpleDeep]} style={styles.header}>
           <SafeAreaView edges={['top']}>
@@ -68,8 +140,8 @@ export default function LessonScreen({ navigation }: Props) {
             <Text style={styles.hintText}>Tap any <Text style={styles.hintUnderline}>underlined word</Text> to understand it simply →</Text>
           </View>
 
-          <Button label="🎯 Ready? Take the quiz — Earn 50 XP!" variant="gradientPurple" style={{ marginTop: spacing.lg }} onPress={() => navigation.navigate('Quiz')} />
-          <Button label="Take Quiz & Earn 50 XP ⭐" variant="primary" style={{ marginTop: spacing.md }} onPress={() => navigation.navigate('Quiz')} />
+          <Button label="🎯 Ready? Take the quiz — Earn 50 XP!" variant="gradientPurple" style={{ marginTop: spacing.lg }} onPress={handleQuizPress} />
+          <Button label="Take Quiz & Earn 50 XP ⭐" variant="primary" style={{ marginTop: spacing.md }} onPress={handleQuizPress} />
         </View>
       </ScrollView>
     </View>

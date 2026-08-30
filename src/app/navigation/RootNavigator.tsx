@@ -1,37 +1,38 @@
-/**
- * Root navigator. Stack hosting: Splash → Onboarding → MainTabs, plus the
- * modal/detail screens (Lesson, Quiz, Jargon Buster, Buy/Sell, Trade Success,
- * Community) presented over the tabs.
- */
+/** RootNavigator.tsx — Main router handling Auth vs Main session */
 import React, { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSelector } from 'react-redux';
 
-import { RootStackParamList } from './types';
+// Import local security / storage
+import { tokenStorage } from '../../core/api/tokenStorage';
+import { credentialsStore } from '../../core/security/secureStore';
+import { RootState } from '../store';
+
+// Import the main stacks
+import AuthStack from './AuthStack';
 import MainTabs from './MainTabs';
-import SplashScreen from '../../features/onboarding/screens/SplashScreen';
-import SignupScreen from '../../features/onboarding/screens/SignupScreen';
-import LoginScreen from '../../features/onboarding/screens/LoginScreen';
-import OnboardingScreen from '../../features/onboarding/screens/OnboardingScreen';
+
+// Import push/modal screens
 import LessonScreen from '../../features/learn/screens/LessonScreen';
 import JargonBusterScreen from '../../features/learn/screens/JargonBusterScreen';
 import QuizScreen from '../../features/quiz/screens/QuizScreen';
 import BuySellScreen from '../../features/practice/screens/BuySellScreen';
 import TradeSuccessScreen from '../../features/practice/screens/TradeSuccessScreen';
 import CommunityScreen from '../../features/community/screens/CommunityScreen';
-import ForgotPasswordScreen from '../../features/onboarding/screens/ForgotPasswordScreen';
-import VerifyOtpScreen from '../../features/onboarding/screens/VerifyOtpScreen';
-import ResetPasswordScreen from '../../features/onboarding/screens/ResetPasswordScreen';
+
+// Import MPIN feature screens
 import MpinLoginScreen from '../../features/onboarding/screens/MpinLoginScreen';
 import SetMpinScreen from '../../features/onboarding/screens/SetMpinScreen';
 import ResetMpinScreen from '../../features/onboarding/screens/ResetMpinScreen';
 
-import { RootState } from '../store';
-import { credentialsStore } from '../../core/security/secureStore';
+// Import Watchlist feature screens
+import WatchlistScreen from '../../features/watchlist/screens/WatchlistScreen';
+import SymbolSearchScreen from '../../features/search/screens/SymbolSearchScreen';
+import StockDetailScreen from '../../features/market/screens/StockDetailScreen';
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+const Stack = createNativeStackNavigator<any>();
 
 function AppLockManager({ navigationRef }: { navigationRef: any }) {
   const accessToken = useSelector((state: RootState) => state.auth.accessToken);
@@ -91,36 +92,44 @@ function AppLockManager({ navigationRef }: { navigationRef: any }) {
 
 export default function RootNavigator() {
   const navigationRef = useNavigationContainerRef();
+  const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
 
   return (
     <NavigationContainer ref={navigationRef}>
       <AppLockManager navigationRef={navigationRef} />
-      <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Splash" component={SplashScreen} />
-        <Stack.Screen name="Signup" component={SignupScreen} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="MpinLogin" component={MpinLoginScreen} />
-        <Stack.Screen name="SetMpin" component={SetMpinScreen} />
-        <Stack.Screen name="ResetMpin" component={ResetMpinScreen} />
-        <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} />
-        <Stack.Screen name="VerifyOtp" component={VerifyOtpScreen} />
-        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+      <Stack.Navigator 
+        initialRouteName={isAuthenticated ? "MainTabs" : "Auth"} 
+        screenOptions={{ headerShown: false }}
+      >
+        {/* Auth flow (Splash, Onboarding, Login, OTP, Mpin) */}
+        <Stack.Screen name="Auth" component={AuthStack} />
+
+        {/* Main app flow */}
         <Stack.Screen name="MainTabs" component={MainTabs} />
 
         {/* Detail / pushed screens */}
-        <Stack.Screen name="Lesson" component={LessonScreen} />
-        <Stack.Screen name="Quiz" component={QuizScreen} />
+        <Stack.Screen name="Lesson" component={LessonScreen as any} />
+        <Stack.Screen name="Quiz" component={QuizScreen as any} />
         <Stack.Screen name="Community" component={CommunityScreen} />
+        
+        {/* MPIN / Biometric screens at root level to support global overlay locking */}
+        <Stack.Screen name="MpinLogin" component={MpinLoginScreen as any} />
+        <Stack.Screen name="SetMpin" component={SetMpinScreen as any} />
+        <Stack.Screen name="ResetMpin" component={ResetMpinScreen as any} />
+
+        {/* Watchlist feature screens */}
+        <Stack.Screen name="Watchlist" component={WatchlistScreen as any} />
+        <Stack.Screen name="SymbolSearch" component={SymbolSearchScreen as any} />
+        <Stack.Screen name="StockDetail" component={StockDetailScreen as any} /> 
 
         {/* Transparent modal sheets */}
         <Stack.Group screenOptions={{ presentation: 'transparentModal', animation: 'slide_from_bottom' }}>
-          <Stack.Screen name="JargonBuster" component={JargonBusterScreen} />
-          <Stack.Screen name="BuySell" component={BuySellScreen} />
+          <Stack.Screen name="JargonBuster" component={JargonBusterScreen as any} />
+          <Stack.Screen name="BuySell" component={BuySellScreen as any} />
         </Stack.Group>
 
         {/* Full-screen success */}
-        <Stack.Screen name="TradeSuccess" component={TradeSuccessScreen} options={{ animation: 'fade' }} />
+        <Stack.Screen name="TradeSuccess" component={TradeSuccessScreen as any} options={{ animation: 'fade' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

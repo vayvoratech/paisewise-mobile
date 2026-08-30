@@ -112,6 +112,13 @@ const portfolioSlice = createSlice({
         state.invested = state.holdings.reduce((sum, h) => sum + h.avgPrice * h.shares, 0);
         state.holdingsValue = state.holdings.reduce((sum, h) => sum + h.currentPrice * h.shares, 0);
       }
+    },
+    resetPortfolio: (state) => {
+      state.cash = 100_000;
+      state.holdings = [];
+      state.invested = 0;
+      state.holdingsValue = 0;
+      state.xp = 0;
     }
   },
   extraReducers: (builder) => {
@@ -135,5 +142,5 @@ const portfolioSlice = createSlice({
   },
 });
 
-export const { buyStock, sellStock } = portfolioSlice.actions;
+export const { buyStock, sellStock, resetPortfolio } = portfolioSlice.actions;
 export default portfolioSlice.reducer;

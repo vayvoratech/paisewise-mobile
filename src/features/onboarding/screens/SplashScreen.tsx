@@ -1,58 +1,123 @@
 /** Screen 01 — Splash / Landing. Brand + primary CTA. */
-import React, { useEffect } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, Platform, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useDispatch } from 'react-redux';
+
 import { HeroBackground } from '../../../shared/ui/HeroBackground';
 import { Button } from '../../../shared/ui/Button';
 import { Pill } from '../../../shared/ui/Pill';
 import { colors, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { tokenStore, credentialsStore } from '../../../core/security/secureStore';
-import { setTokens } from '../slices/authSlice';
+import { tokenStorage } from '../../../core/api/tokenStorage';
+import { setTokens, refreshTokenThunk } from '../slices/authSlice';
+import mixpanel from '@core/mixpanel'; // Import mixpanel instance
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 
 export default function SplashScreen({ navigation }: Props) {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<any>();
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.3)).current;
+
+  const replaceScreen = (name: string, params?: any) => {
+    const parent = navigation.getParent();
+    if (parent) {
+      (parent as any).replace(name, params);
+    } else {
+      (navigation as any).replace(name, params);
+    }
+  };
 
   useEffect(() => {
-    const checkSession = async () => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  useEffect(() => {
+    const initializeApp = async () => {
+      // Enforce a minimum 2-second display timer for branding & loading experience
+      const timerPromise = new Promise((resolve) => setTimeout(resolve, 2000));
+
+      let sessionRestored = false;
+      let savedPhone = '';
+      let hasMpin = false;
+
       try {
-        const accessToken = await tokenStore.getAccessToken();
-        const refreshToken = await tokenStore.getRefreshToken();
-        const savedPhone = await credentialsStore.getPhone();
-        const hasMpin = await credentialsStore.getHasMpin();
+        const accessToken = tokenStorage.getAccessToken() || await tokenStore.getAccessToken();
+        const refreshToken = tokenStorage.getRefreshToken() || await tokenStore.getRefreshToken();
+        savedPhone = await credentialsStore.getPhone() || '';
+        hasMpin = await credentialsStore.getHasMpin();
 
         if (accessToken && refreshToken) {
           dispatch(setTokens({ accessToken, refreshToken }));
-          if (savedPhone && hasMpin) {
-            navigation.replace('MpinLogin', { phone: savedPhone });
-          } else {
-            navigation.replace('MainTabs', undefined as any);
+          sessionRestored = true;
+        } else if (refreshToken && !accessToken) {
+          // Attempt silent token refresh
+          try {
+            const result = await dispatch(refreshTokenThunk()).unwrap();
+            sessionRestored = true;
+          } catch (refreshErr) {
+            console.warn('Silent token refresh failed during splash:', refreshErr);
+            tokenStorage.clearTokens();
+            await tokenStore.clear();
           }
-          return;
-        }
-
-        // If no active session, check if returning user with configured MPIN
-        if (savedPhone && hasMpin) {
-          navigation.replace('MpinLogin', { phone: savedPhone });
         }
       } catch (err) {
         console.warn('Failed to restore login session on startup:', err);
       }
+
+      await timerPromise;
+
+      // Conditional navigation based on session status and MPIN setup
+      if (sessionRestored) {
+        if (savedPhone && hasMpin) {
+          replaceScreen('MpinLogin', { phone: savedPhone });
+        } else {
+          replaceScreen('MainTabs', undefined as any);
+        }
+      } else {
+        // If not authenticated, check if returning user with configured MPIN
+        if (savedPhone && hasMpin) {
+          replaceScreen('MpinLogin', { phone: savedPhone });
+        }
+      }
     };
-    checkSession();
+
+    initializeApp();
   }, [dispatch, navigation]);
+
+  const handleStartFreePress = () => {
+    // Track signup_started as per specification
+    mixpanel.track('signup_started', {
+      app_version: '1.0.0',
+      device_type: Platform.OS,
+    });
+
+    navigation.navigate('Signup');
+  };
 
   return (
     <HeroBackground tone="navy">
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <View style={styles.logo}>
+          <Animated.View style={[styles.logo, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
             <Text style={styles.logoEmoji}>🏛️</Text>
-          </View>
+          </Animated.View>
           <Text style={styles.brand}>
             Paise<Text style={{ color: colors.amber }}>Wise</Text>
           </Text>
@@ -67,7 +132,7 @@ export default function SplashScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.footer}>
-          <Button label="शुरू करें — Start Free 🚀" variant="gradientAmber" onPress={() => navigation.navigate('Signup')} />
+          <Button label="शुरू करें — Start Free 🚀" variant="gradientAmber" onPress={handleStartFreePress} />
           <Button
             label="Already have an account? Log in"
             variant="outline"

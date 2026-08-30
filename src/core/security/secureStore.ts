@@ -74,6 +74,7 @@ export const tokenStore = {
       removeItem(KEYS.refreshToken),
     ]);
   },
+<<<<<<< HEAD
 };
 
 export const credentialsStore = {
@@ -108,4 +109,6 @@ export const credentialsStore = {
       removeItem(KEYS.hasMpin),
     ]);
   },
+=======
+>>>>>>> origin/develop
 };

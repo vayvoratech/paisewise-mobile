@@ -1,11 +1,10 @@
 /** Screen 11 — Practice Trading. Virtual ₹1L, top stocks with BUY/SELL/WHY. */
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { HeroBackground } from '../../../shared/ui/HeroBackground';
 import { Card } from '../../../shared/ui/Card';
 import { Pill } from '../../../shared/ui/Pill';
 import { Sparkline } from '../../../shared/ui/Sparkline';
@@ -16,6 +15,8 @@ import { marketService } from '../../market/market.service';
 import { Stock } from '../../market/market.types';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../../app/store';
+import mixpanel from '@core/mixpanel';
+import { HeroBackground } from '../../../shared/ui/HeroBackground';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabsParamList, 'Practice'>,
@@ -31,7 +32,13 @@ export default function PracticeScreen({ navigation }: Props) {
   const [isMarketOpen, setIsMarketOpen] = useState(false);
   const profit = cash + holdingsValue - starting;
 
+  // Track practice_screen_viewed once on mount
   useEffect(() => {
+    mixpanel.track('practice_screen_viewed', {
+      available_balance: cash,
+      holdings_count: Number(invested > 0),
+      unrealized_pnl: profit,
+    });
     marketService.getTopStocks().then(setStocks);
     marketService.getMarketStatus().then((res) => {
       if (res) {
@@ -39,6 +46,48 @@ export default function PracticeScreen({ navigation }: Props) {
       }
     });
   }, []);
+
+  const handleStockTap = (stock: Stock) => {
+    const rawPrice: any = stock.price ?? 0;
+    const ltp = typeof rawPrice === 'string' ? parseFloat(rawPrice.replace(/[^0-9.]/g, '')) : Number(rawPrice);
+
+    mixpanel.track('stock_tapped', {
+      symbol: stock.symbol,
+      company_name: stock.name,
+      source: 'practice_screen',
+      ltp: isNaN(ltp) ? 0 : ltp,
+    });
+  };
+
+  const handleBuyPress = (stock: Stock) => {
+    const rawPrice: any = stock.price ?? 0;
+    const ltpValue = typeof rawPrice === 'string' ? parseFloat(rawPrice.replace(/[^0-9.]/g, '')) : Number(rawPrice);
+
+    mixpanel.track('buy_modal_opened', {
+      symbol: stock.symbol,
+      company_name: stock.name,
+      current_ltp: isNaN(ltpValue) ? 0 : ltpValue,
+      source: 'practice_screen',
+      is_paper: true,
+      available_balance: cash,
+    });
+    navigation.navigate('BuySell', { symbol: stock.symbol, mode: 'buy' } as any);
+  };
+
+  const handleSellPress = (stock: Stock) => {
+    const rawPrice: any = stock.price ?? 0;
+    const ltpValue = typeof rawPrice === 'string' ? parseFloat(rawPrice.replace(/[^0-9.]/g, '')) : Number(rawPrice);
+
+    mixpanel.track('sell_modal_opened', {
+      symbol: stock.symbol,
+      company_name: stock.name,
+      current_ltp: isNaN(ltpValue) ? 0 : ltpValue,
+      source: 'practice_screen',
+      is_paper: true,
+      quantity_owned: 5,
+    });
+    navigation.navigate('BuySell', { symbol: stock.symbol, mode: 'sell' } as any);
+  };
 
   return (
     <View style={styles.root}>
@@ -55,7 +104,7 @@ export default function PracticeScreen({ navigation }: Props) {
                 <View style={styles.statDivider} />
                 <Stat label="INVESTED" value={formatINR(invested)} />
                 <View style={styles.statDivider} />
-                <Stat label="PROFIT" value={formatINR(profit)} positive />
+                <Stat label="PROFIT" value={formatINR(profit)} positive={profit >= 0} />
               </View>
             </Card>
           </View>
@@ -76,7 +125,7 @@ export default function PracticeScreen({ navigation }: Props) {
           const up = s.changePct >= 0;
           const tint = up ? colors.green : colors.pink;
           return (
-            <Card key={s.symbol} style={styles.stockCard}>
+            <Card key={s.symbol} style={styles.stockCard} onPress={() => handleStockTap(s)}>
               <View style={styles.stockHead}>
                 <View>
                   <Text style={styles.stockSym}>{s.symbol}</Text>
@@ -93,10 +142,10 @@ export default function PracticeScreen({ navigation }: Props) {
               </View>
 
               <View style={styles.actions}>
-                <TouchableOpacity style={[styles.action, { backgroundColor: '#E6FAF1' }]} onPress={() => navigation.navigate('BuySell', { symbol: s.symbol, mode: 'buy' })}>
+                <TouchableOpacity style={[styles.action, { backgroundColor: '#E6FAF1' }]} onPress={() => handleBuyPress(s)}>
                   <Text style={[styles.actionText, { color: colors.green }]}>▲  BUY</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.action, { backgroundColor: colors.redSoft }]} onPress={() => navigation.navigate('BuySell', { symbol: s.symbol, mode: 'sell' })}>
+                <TouchableOpacity style={[styles.action, { backgroundColor: colors.redSoft }]} onPress={() => handleSellPress(s)}>
                   <Text style={[styles.actionText, { color: colors.pink }]}>▼  SELL</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.action, { backgroundColor: colors.indigoChip }]}>
@@ -123,15 +172,15 @@ function Stat({ label, value, positive }: { label: string; value: string; positi
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceAlt },
   hero: { flexGrow: 0 },
-  heroInner: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xl, paddingTop: spacing.md },
-  title: { ...typography.h1, color: colors.textOnDark, marginTop: spacing.lg },
+  heroInner: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xl },
+  title: { ...typography.h1, color: colors.textOnDark, marginTop: spacing.md },
   subtitle: { ...typography.body, color: colors.textMutedDark, marginTop: spacing.xs },
-  statCard: { marginTop: spacing.lg, paddingVertical: spacing.lg },
-  statRow: { flexDirection: 'row', alignItems: 'center' },
-  stat: { flex: 1, alignItems: 'center', paddingHorizontal: spacing.sm },
-  statDivider: { width: 1, height: 36, backgroundColor: colors.borderDark },
-  statLabel: { ...typography.overline, color: colors.textMutedDark, fontSize: 11 },
-  statValue: { ...typography.h3, color: colors.textOnDark, marginTop: spacing.xs },
+  statCard: { marginTop: spacing.xl, paddingVertical: spacing.lg },
+  statRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
+  stat: { alignItems: 'center', flex: 1 },
+  statLabel: { ...typography.overline, color: colors.textMutedDark },
+  statValue: { ...typography.h2, color: colors.textOnDark, marginTop: 4 },
+  statDivider: { width: 1, height: 32, backgroundColor: 'rgba(255,255,255,0.1)' },
   sheet: { flex: 1, backgroundColor: colors.surfaceAlt, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, marginTop: -spacing.md },
   sheetContent: { padding: spacing.xl, paddingBottom: spacing.xxl, gap: spacing.lg },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -139,9 +188,9 @@ const styles = StyleSheet.create({
   stockCard: {},
   stockHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   stockSym: { ...typography.h3, color: colors.text },
-  stockName: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
+  stockName: { ...typography.caption, color: colors.textMuted, marginTop: spacing.xs },
   stockPrice: { ...typography.h3, color: colors.text },
-  stockPct: { ...typography.caption, marginTop: 2 },
+  stockPct: { ...typography.caption, marginTop: spacing.xs },
   chartWrap: { borderRadius: radius.md, marginTop: spacing.md, paddingVertical: spacing.sm, alignItems: 'center', overflow: 'hidden' },
   actions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
   action: { flex: 1, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },

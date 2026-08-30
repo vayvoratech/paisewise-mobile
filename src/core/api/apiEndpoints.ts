@@ -16,6 +16,14 @@ const DEV_IP = getDevIp();
 
 export const BASE_URL = `http://${DEV_IP}:8080`;
 
+<<<<<<< HEAD
+=======
+// export const BASE_URL = 'http://192.168.29.179:8080';
+
+// /src/core/api/apiEndpoints.ts
+
+export const BASE_URL = 'http://192.168.29.179:8080';
+>>>>>>> origin/develop
 
 export const API_ENDPOINTS = {
   AUTH: {

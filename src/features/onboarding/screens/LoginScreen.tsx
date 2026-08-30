@@ -13,28 +13,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { HeroBackground } from '../../../shared/ui/HeroBackground';
 import { Button } from '../../../shared/ui/Button';
-import {
-  colors,
-  radius,
-  spacing,
-  typography,
-} from '../../../core/theme/theme';
+import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch } from 'react-redux';
 import { loginUser } from '../slices/authSlice';
+import mixpanel from '@core/mixpanel';
+import { Analytics } from '../../../core/analyticsService'; 
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
   const dispatch = useDispatch();
+
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Focus states
   const [isIdentifierFocused, setIsIdentifierFocused] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
 
@@ -43,22 +40,55 @@ export default function LoginScreen({ navigation }: Props) {
     const id = identifier.trim();
     const isPhone = /^\d{10}$/.test(id);
     const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(id);
+    
     if (!isPhone && !isEmail) return setError('Enter a valid 10-digit phone number or email address.');
     if (password.length < 4) return setError('Enter your password.');
 
     setLoading(true);
+    const startTime = Date.now(); // Track time taken to log in
 
     try {
+      // Backend expects 'identifier' rather than separate phone/email parameters
       const payload = { identifier: id, password };
 
-      // Dispatch Redux thunk to log in and save tokens automatically
-      await dispatch(loginUser(payload) as any).unwrap();
+      // Dispatch Redux thunk to log in
+      const resultAction = await dispatch(loginUser(payload) as any).unwrap();
 
       setLoading(false);
+
+      const userId = resultAction?.userId || resultAction?.user?.id || 'unknown_user_id';
+      const timeToLogin = Math.round((Date.now() - startTime) / 1000);
+
+      // Identify user in Mixpanel
+      mixpanel.identify(userId);
+
+      // ✅ 1. Track login_success using the exact spec properties
+      Analytics.loginSuccess({
+        sessionId: 'sess_abc123', // Replace with your app's actual active session ID state/variable
+        loginMethod: isPhone ? 'phone' : 'email',
+        timeToLoginSeconds: timeToLogin,
+        daysSinceLastLogin: 1, // Update this if you store last login days in MMKV/AsyncStorage
+      });
+
       navigation.replace('MainTabs', { screen: 'Home' });
     } catch (err: any) {
       setLoading(false);
-      setError(err || 'Could not log in right now. Please try again.');
+
+      const errorMessage = typeof err === 'string' ? err : err?.message || '';
+      const failureReason = errorMessage.toLowerCase().includes('not found') 
+        ? 'account_locked' 
+        : 'wrong_password';
+
+      // ✅ 2. Track login_failed using the exact spec properties
+      Analytics.loginFailed({
+        sessionId: 'sess_abc123', // Replace with your active session ID variable
+        loginMethod: isPhone ? 'phone' : 'email',
+        attemptNumber: 1,
+        attemptsRemaining: 2,
+        failureReason: failureReason === 'account_locked' ? 'account_locked' : 'wrong_password',
+      });
+
+      setError(errorMessage || 'Could not log in right now. Please try again.');
     }
   };
 
@@ -70,7 +100,6 @@ export default function LoginScreen({ navigation }: Props) {
             <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>← Back</Text></TouchableOpacity>
             <View style={styles.logo}><Text style={styles.logoEmoji}>🏛️</Text></View>
             <Text style={styles.title}>Welcome back 👋</Text>
-            {/* <Text style={styles.subtitle}>Log in to continue learning</Text> */}
 
             <Text style={styles.fieldLabel}>Phone number or Email</Text>
             <View style={[styles.inputWrapper, isIdentifierFocused && styles.inputWrapperFocused]}>
@@ -93,7 +122,7 @@ export default function LoginScreen({ navigation }: Props) {
                 style={styles.input}
                 placeholder="Your password"
                 placeholderTextColor={colors.textFaint}
-                secureTextEntry={showPassword}
+                secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
                 onFocus={() => setIsPasswordFocused(true)}
