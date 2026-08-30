@@ -1,50 +1,68 @@
-/** Screen 03 — Home Dashboard.*/
+/** Screen 03 — Home Dashboard. Greeting, stats, today's lesson, market, quick actions. */
 import React, { useState, useCallback, useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CompositeScreenProps } from '@react-navigation/native';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useSelector } from 'react-redux';
+
 import { HeroBackground } from '../../../shared/ui/HeroBackground';
 import { Card } from '../../../shared/ui/Card';
-import { Pill } from '../../../shared/ui/Pill';
 import { ProgressBar } from '../../../shared/ui/ProgressBar';
+import { Pill } from '../../../shared/ui/Pill';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
-import { formatINR, formatPct } from '../../../shared/format';
+import { formatINR } from '../../../shared/format';
 import { MainTabsParamList, RootStackParamList } from '../../../app/navigation/types';
 import { PROFILE } from '../../profile/profile.data';
-import { TODAYS_LESSON } from '../../learn/learn.data';
 import { tokenStorage } from '../../../core/api/tokenStorage';
+import type { RootState } from '../../../app/store';
+import { marketService } from '../../market/market.service';
+import { Stock } from '../../market/market.types';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabsParamList, 'Home'>,
   NativeStackScreenProps<RootStackParamList>
 >;
 
-
-const MARKET = [
-  { symbol: 'RELIANCE', value: 2952, pct: 1.2 },
-  { symbol: 'TCS', value: 3801, pct: -0.8 },
-  { symbol: 'NIFTY', value: 22456, pct: 0.5 },
-];
-
-const QUICK_ACTIONS: { emoji: string; label: string; go: keyof MainTabsParamList | 'Community' | 'Watchlist' }[] = [
-  { emoji: '⭐', label: 'WATCHLIST', go: 'Watchlist' },
-  { emoji: '📚', label: 'LEARN', go: 'Learn' },
-  { emoji: '🧮', label: 'CALCULATE', go: 'Learn' },
-  { emoji: '👥', label: 'COMMUNITY', go: 'Community' },
+const QUICK_ACTIONS = [
+  { emoji: '📚', label: 'Lessons', go: 'Learn' },
+  { emoji: '📈', label: 'Watchlist', go: 'Watchlist' },
+  { emoji: '📊', label: 'Practice', go: 'Practice' },
+  { emoji: '💼', label: 'Portfolio', go: 'Portfolio' },
 ];
 
 export default function HomeScreen({ navigation }: Props) {
+  const holdingsValue = useSelector((state: RootState) => state.portfolio.holdingsValue);
   const [refreshing, setRefreshing] = useState(false);
+
+  const [isMarketOpen, setIsMarketOpen] = useState(false);
+  const [gainers, setGainers] = useState<Stock[]>([]);
+  const [losers, setLosers] = useState<Stock[]>([]);
+
+  const fetchHomeData = () => {
+    marketService.getMarketStatus().then((res) => {
+      if (res) {
+        setIsMarketOpen(res.isMarketOpen);
+      }
+    });
+    marketService.getTopMovers().then((res) => {
+      if (res) {
+        setGainers(res.gainers.slice(0, 3));
+        setLosers(res.losers.slice(0, 3));
+      }
+    });
+  };
 
   useEffect(() => {
     console.log('Stored Access Token:', tokenStorage.getAccessToken());
     console.log('Stored User ID:', tokenStorage.getUserId());
+    fetchHomeData();
   }, []);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
+    fetchHomeData();
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
@@ -55,44 +73,65 @@ export default function HomeScreen({ navigation }: Props) {
 
   return (
     <View style={styles.root}>
-      {/* SafeAreaView applied at the root container level to push content below Dynamic Island/notch */}
+      {/* SafeAreaView applied at the root container level to push content below notch */}
       <SafeAreaView edges={['top']} style={styles.safeAreaHeader}>
         <HeroBackground tone="dark" style={styles.hero}>
           <View style={styles.heroInner}>
             <View style={styles.greetRow}>
               <View>
-                <Text style={styles.namaste}>NAMASTE, RAHUL 👋</Text>
-                <Text style={styles.morning}>Good morning!</Text>
+                <Text style={styles.namaste}>NAMASTE 🙏</Text>
+                <View style={styles.morningRow}>
+                  <Text style={styles.morning}>Hello, {PROFILE.name}</Text>
+                  <View style={styles.streakBadge}>
+                    <Text style={styles.streakText}>🔥 {PROFILE.dayStreak} Days</Text>
+                  </View>
+                </View>
               </View>
-              <TouchableOpacity style={styles.bell}>
+              <TouchableOpacity style={styles.bell} activeOpacity={0.7}>
                 <Text style={styles.bellEmoji}>🔔</Text>
                 <View style={styles.bellBadge}>
-                  <Text style={styles.bellBadgeText}>3</Text>
+                  <Text style={styles.bellBadgeText}>2</Text>
                 </View>
               </TouchableOpacity>
             </View>
 
-            {/* Production Search Bar: Tapping this opens SymbolSearchScreen */}
+            {/* Dynamic Search Bar Trigger */}
             <TouchableOpacity 
+              activeOpacity={0.85} 
+              onPress={() => navigation.navigate('SymbolSearch')}
               style={styles.searchBarContainer}
-              activeOpacity={0.9}
-              onPress={() => navigation.navigate('SymbolSearch' as any)}
             >
               <Text style={styles.searchIcon}>🔍</Text>
-              <Text style={styles.searchPlaceholder}>Search stocks, ETFs, indices...</Text>
+              <Text style={styles.searchPlaceholder}>Search stocks, mutual funds...</Text>
             </TouchableOpacity>
 
-            <Card dark style={styles.statCard}>
+            {/* Nifty/Sensex Indices Strip */}
+            <View style={styles.indicesStrip}>
+              <View style={styles.indexBox}>
+                <Text style={styles.indexName}>NIFTY 50</Text>
+                <Text style={styles.indexVal}>24,320.50</Text>
+                <Text style={[styles.indexPct, { color: colors.green }]}>↑ +0.45%</Text>
+              </View>
+              <View style={styles.indexDivider} />
+              <View style={styles.indexBox}>
+                <Text style={styles.indexName}>SENSEX</Text>
+                <Text style={styles.indexVal}>79,850.30</Text>
+                <Text style={[styles.indexPct, { color: colors.green }]}>↑ +0.52%</Text>
+              </View>
+            </View>
+
+            {/* Quick stats card */}
+            <Card style={styles.statCard}>
               <View style={styles.statRow}>
                 <View>
-                  <Text style={styles.statLabel}>PRACTICE VALUE</Text>
-                  <Text style={styles.statValue}>{formatINR(104320)}</Text>
-                  <Text style={styles.statGain}>↑ {formatINR(gain)} ({formatPct(gainPct)})</Text>
+                  <Text style={styles.statLabel}>VIRTUAL HOLDINGS</Text>
+                  <Text style={styles.statValue}>{formatINR(holdingsValue)}</Text>
+                  <Text style={styles.statGain}>+{formatINR(gain)} (+{gainPct}%)</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={styles.statLabel}>LEARNING XP</Text>
-                  <Text style={styles.statXp}>⭐ {PROFILE.xpTotal.toLocaleString('en-IN')}</Text>
-                  <Text style={styles.statLevel}>LVL {PROFILE.level} INVESTOR</Text>
+                  <Text style={styles.statLabel}>LEVEL 4 LEARNER</Text>
+                  <Text style={styles.statXp}>{PROFILE.xpTotal} XP</Text>
+                  <Text style={styles.statLevel}>120 XP to next level</Text>
                 </View>
               </View>
             </Card>
@@ -102,54 +141,96 @@ export default function HomeScreen({ navigation }: Props) {
 
       <ScrollView 
         style={styles.sheet} 
-        contentContainerStyle={styles.sheetContent} 
+        contentContainerStyle={styles.sheetContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.amber} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Today's lesson */}
+        {/* Today's lesson Progress */}
         <View style={styles.sectionHead}>
           <Text style={styles.sectionTitle}>Today's Lesson</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Learn')}>
-            <Text style={styles.seeAll}>SEE ALL →</Text>
+            <Text style={styles.seeAll}>GO TO SCHOOL</Text>
           </TouchableOpacity>
         </View>
 
-        <Card onPress={() => navigation.navigate('Lesson', { lessonId: TODAYS_LESSON.id })} style={styles.lessonCard}>
+        <Card style={styles.lessonCard} onPress={() => navigation.navigate('Learn')}>
           <View style={styles.lessonRow}>
-            <View style={styles.lessonIcon}><Text style={{ fontSize: 22 }}>📊</Text></View>
+            <View style={styles.lessonIcon}>
+              <Text style={{ fontSize: 24 }}>🎓</Text>
+            </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.lessonTitle}>{TODAYS_LESSON.title}</Text>
-              <Text style={styles.lessonMeta}>3 MIN · HINDI AVAILABLE</Text>
-              <View style={{ marginTop: spacing.sm }}>
-                <ProgressBar progress={0.4} color={colors.amber} trackColor={colors.border} />
+              <Text style={styles.lessonTitle}>Basics of Mutual Funds</Text>
+              <Text style={styles.lessonMeta}>Lesson 1 of 5 • 60% Completed</Text>
+              <View style={{ marginTop: 8 }}>
+                <ProgressBar progress={0.6} />
               </View>
             </View>
-            <Pill label="NEW" color={colors.purple} bg={colors.indigoChip} />
           </View>
         </Card>
 
         {/* Market Now */}
         <View style={[styles.sectionHead, { marginTop: spacing.xl }]}>
           <Text style={styles.sectionTitle}>Market Now</Text>
-          <Pill label="● LIVE" color={colors.green} bg={colors.greenSoft} />
+          <Pill
+            label={isMarketOpen ? "● LIVE" : "● CLOSED"}
+            color={isMarketOpen ? colors.green : colors.pink}
+            bg={isMarketOpen ? colors.greenSoft : colors.redSoft}
+          />
         </View>
+
+        <Text style={{ ...typography.overline, color: colors.textMuted, marginBottom: spacing.sm }}>
+          TOP GAINERS
+        </Text>
         <View style={styles.marketRow}>
-          {MARKET.map((m) => (
-            <Card 
-              key={m.symbol} 
-              style={styles.marketCard} 
-              onPress={() => navigation.navigate('StockDetail', { symbol: m.symbol })}
-            >
-              <Text style={styles.marketSym}>{m.symbol}</Text>
-              <Text style={styles.marketVal}>{formatINR(m.value)}</Text>
-              <Text style={[styles.marketPct, { color: m.pct >= 0 ? colors.green : colors.pink }]}>
-                {m.pct >= 0 ? '↑' : '↓'} {Math.abs(m.pct)}%
-              </Text>
-            </Card>
-          ))}
+          {gainers.length > 0 ? (
+            gainers.map((m) => {
+              const up = m.changePct >= 0;
+              const sym = m.symbol.replace("NSE:", "");
+              return (
+                <Card 
+                  key={m.symbol} 
+                  style={styles.marketCard}
+                  onPress={() => navigation.navigate('StockDetail', { symbol: sym })}
+                >
+                  <Text style={styles.marketSym}>{sym}</Text>
+                  <Text style={styles.marketVal}>{formatINR(m.price)}</Text>
+                  <Text style={[styles.marketPct, { color: up ? colors.green : colors.pink }]}>
+                    {up ? '↑' : '↓'} {Math.abs(m.changePct).toFixed(2)}%
+                  </Text>
+                </Card>
+              );
+            })
+          ) : (
+            <Text style={{ ...typography.caption, color: colors.textMuted }}>No top gainers active.</Text>
+          )}
         </View>
+
+        {losers.length > 0 && (
+          <>
+            <Text style={{ ...typography.overline, color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm }}>
+              TOP LOSERS
+            </Text>
+            <View style={styles.marketRow}>
+              {losers.map((m) => {
+                const up = m.changePct >= 0;
+                const sym = m.symbol.replace("NSE:", "");
+                return (
+                  <Card 
+                    key={m.symbol} 
+                    style={styles.marketCard}
+                    onPress={() => navigation.navigate('StockDetail', { symbol: sym })}
+                  >
+                    <Text style={styles.marketSym}>{sym}</Text>
+                    <Text style={styles.marketVal}>{formatINR(m.price)}</Text>
+                    <Text style={[styles.marketPct, { color: up ? colors.green : colors.pink }]}>
+                      {up ? '↑' : '↓'} {Math.abs(m.changePct).toFixed(2)}%
+                    </Text>
+                  </Card>
+                );
+              })}
+            </View>
+          </>
+        )}
 
         {/* Quick actions */}
         <Text style={[styles.sectionTitle, { marginTop: spacing.xl, marginBottom: spacing.md }]}>Quick Actions</Text>
@@ -172,15 +253,24 @@ const styles = StyleSheet.create({
   hero: { flexGrow: 0 },
   heroInner: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xl },
   greetRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: spacing.xs },
-  namaste: { ...typography.overline, color: colors.textMutedDark },
-  morning: { ...typography.h1, color: colors.textOnDark, marginTop: 4 },
+  namaste: { ...typography.overline, color: colors.textMuted },
+  morningRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  morning: { ...typography.h1, color: colors.text },
+  streakBadge: { backgroundColor: 'rgba(249, 115, 22, 0.18)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.sm, marginLeft: spacing.sm, alignSelf: 'center' },
+  streakText: { fontSize: 11, fontWeight: '700', color: colors.orange },
   bell: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' },
   bellEmoji: { fontSize: 22 },
   bellBadge: { position: 'absolute', top: 6, right: 6, backgroundColor: colors.pink, borderRadius: 9, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   bellBadgeText: { color: colors.white, fontSize: 11, fontWeight: '700' },
-  searchBarContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: radius.lg, paddingHorizontal: spacing.md, paddingVertical: 12, marginTop: spacing.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  searchBarContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(15, 23, 42, 0.05)', borderRadius: radius.lg, paddingHorizontal: spacing.md, paddingVertical: 12, marginTop: spacing.md, borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.1)' },
   searchIcon: { fontSize: 16, marginRight: spacing.sm },
-  searchPlaceholder: { color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: '500' },
+  searchPlaceholder: { color: colors.textMuted, fontSize: 13, fontWeight: '500' },
+  indicesStrip: { flexDirection: 'row', backgroundColor: 'rgba(15, 23, 42, 0.04)', borderRadius: radius.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, marginTop: spacing.md, alignItems: 'center', justifyContent: 'space-around', borderWidth: 1, borderColor: 'rgba(15, 23, 42, 0.08)' },
+  indexBox: { alignItems: 'center' },
+  indexName: { fontSize: 10, fontWeight: '700', color: colors.textMuted },
+  indexVal: { fontSize: 13, fontWeight: '700', color: colors.text, marginTop: 2 },
+  indexPct: { fontSize: 10, fontWeight: '600', marginTop: 2 },
+  indexDivider: { width: 1, height: 28, backgroundColor: 'rgba(15, 23, 42, 0.15)' },
   statCard: { marginTop: spacing.md },
   statRow: { flexDirection: 'row', justifyContent: 'space-between' },
   statLabel: { ...typography.overline, color: colors.textMutedDark },

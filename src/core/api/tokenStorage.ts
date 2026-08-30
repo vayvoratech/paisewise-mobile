@@ -1,45 +1,91 @@
-import * as RNMMKV from 'react-native-mmkv';
+/**
+ * Token storage — Expo Go compatible.
+ *
+ * Uses a synchronous in-memory cache for fast reads (Redux init),
+ * with expo-secure-store for persistence across app restarts.
+ * This replaces the old react-native-mmkv dependency which requires
+ * native NitroModules that Expo Go cannot run.
+ */
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 
-let storage: any;
-try {
-  const MMKVClass = (RNMMKV as any).MMKV || (RNMMKV as any).default || RNMMKV;
-  storage = new MMKVClass({ id: 'app-secure-storage' });
-} catch (e) {
-  storage = {
-    getString: (key: string) => (typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null),
-    set: (key: string, value: string) => {
-      if (typeof localStorage !== 'undefined') localStorage.setItem(key, value);
-    },
-    delete: (key: string) => {
-      if (typeof localStorage !== 'undefined') localStorage.removeItem(key);
-    },
-    clearAll: () => {
-      if (typeof localStorage !== 'undefined') localStorage.clear();
-    },
-  };
+const KEYS = {
+  accessToken: 'token.accessToken',
+  refreshToken: 'token.refreshToken',
+  userId: 'token.userId',
+} as const;
+
+// In-memory cache for synchronous reads (Redux initialState)
+const memoryCache: Record<string, string | null> = {};
+
+// --- Sync read helpers (from cache only) ---
+
+function getString(key: string): string | null {
+  return memoryCache[key] ?? null;
+}
+
+function set(key: string, value: string): void {
+  memoryCache[key] = value;
+  // Fire-and-forget persist
+  if (Platform.OS !== 'web') {
+    SecureStore.setItemAsync(key, value).catch(() => {});
+  } else if (typeof localStorage !== 'undefined') {
+    try { localStorage.setItem(key, value); } catch {}
+  }
+}
+
+function remove(key: string): void {
+  delete memoryCache[key];
+  if (Platform.OS !== 'web') {
+    SecureStore.deleteItemAsync(key).catch(() => {});
+  } else if (typeof localStorage !== 'undefined') {
+    try { localStorage.removeItem(key); } catch {}
+  }
+}
+
+/**
+ * Call once at app startup (before Redux store init) to hydrate
+ * the in-memory cache from persisted secure storage.
+ */
+export async function hydrateTokenCache(): Promise<void> {
+  if (Platform.OS === 'web') {
+    if (typeof localStorage !== 'undefined') {
+      memoryCache[KEYS.accessToken] = localStorage.getItem(KEYS.accessToken);
+      memoryCache[KEYS.refreshToken] = localStorage.getItem(KEYS.refreshToken);
+      memoryCache[KEYS.userId] = localStorage.getItem(KEYS.userId);
+    }
+    return;
+  }
+  try {
+    const [at, rt, uid] = await Promise.all([
+      SecureStore.getItemAsync(KEYS.accessToken),
+      SecureStore.getItemAsync(KEYS.refreshToken),
+      SecureStore.getItemAsync(KEYS.userId),
+    ]);
+    memoryCache[KEYS.accessToken] = at;
+    memoryCache[KEYS.refreshToken] = rt;
+    memoryCache[KEYS.userId] = uid;
+  } catch {
+    // SecureStore might not be available in some environments; silently skip.
+  }
 }
 
 export const tokenStorage = {
-  getAccessToken: () => storage.getString('access_token'),
-  setAccessToken: (token: string) => storage.set('access_token', token),
-  getRefreshToken: () => storage.getString('refresh_token'),
-  setRefreshToken: (token: string) => storage.set('refresh_token', token),
-  getUserId: () => storage.getString('user_id'),
-  setUserId: (id: string) => storage.set('user_id', id),
-  
-  // Provide both clearTokens and clearAll to satisfy both definitions
+  getAccessToken: () => getString(KEYS.accessToken),
+  setAccessToken: (token: string) => set(KEYS.accessToken, token),
+  getRefreshToken: () => getString(KEYS.refreshToken),
+  setRefreshToken: (token: string) => set(KEYS.refreshToken, token),
+  getUserId: () => getString(KEYS.userId),
+  setUserId: (id: string) => set(KEYS.userId, id),
+
   clearTokens: () => {
-    storage.delete('access_token');
-    storage.delete('refresh_token');
-    storage.delete('user_id');
+    remove(KEYS.accessToken);
+    remove(KEYS.refreshToken);
+    remove(KEYS.userId);
   },
   clearAll: () => {
-    if (typeof storage.clearAll === 'function') {
-      storage.clearAll();
-    } else {
-      storage.delete('access_token');
-      storage.delete('refresh_token');
-      storage.delete('user_id');
-    }
+    remove(KEYS.accessToken);
+    remove(KEYS.refreshToken);
+    remove(KEYS.userId);
   },
 };

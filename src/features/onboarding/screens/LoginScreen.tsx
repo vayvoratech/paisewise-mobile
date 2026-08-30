@@ -13,12 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { HeroBackground } from '../../../shared/ui/HeroBackground';
 import { Button } from '../../../shared/ui/Button';
-import {
-  colors,
-  radius,
-  spacing,
-  typography,
-} from '../../../core/theme/theme';
+import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch } from 'react-redux';
@@ -30,13 +25,13 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
   const dispatch = useDispatch();
+
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Focus states
   const [isIdentifierFocused, setIsIdentifierFocused] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
 
@@ -53,7 +48,8 @@ export default function LoginScreen({ navigation }: Props) {
     const startTime = Date.now(); // Track time taken to log in
 
     try {
-      const payload = isPhone ? { phone: id, password } : { email: id, password };
+      // Backend expects 'identifier' rather than separate phone/email parameters
+      const payload = { identifier: id, password };
 
       // Dispatch Redux thunk to log in
       const resultAction = await dispatch(loginUser(payload) as any).unwrap();

@@ -1,15 +1,17 @@
 /** Screen 01 — Splash / Landing. Brand + primary CTA. */
-import React, { useEffect } from 'react';
-import { StyleSheet, Text, View, Platform } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, Platform, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useDispatch } from 'react-redux';
+
 import { HeroBackground } from '../../../shared/ui/HeroBackground';
 import { Button } from '../../../shared/ui/Button';
 import { Pill } from '../../../shared/ui/Pill';
 import { colors, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
-import { tokenStorage } from '../../../core/api/tokenStorage'; // Using your verified tokenStorage utility from Week 12
+import { tokenStore, credentialsStore } from '../../../core/security/secureStore';
+import { tokenStorage } from '../../../core/api/tokenStorage';
 import { setTokens, refreshTokenThunk } from '../slices/authSlice';
 import mixpanel from '@core/mixpanel'; // Import mixpanel instance
 
@@ -18,44 +20,82 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 export default function SplashScreen({ navigation }: Props) {
   const dispatch = useDispatch<any>();
 
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.3)).current;
+
+  const replaceScreen = (name: string, params?: any) => {
+    const parent = navigation.getParent();
+    if (parent) {
+      (parent as any).replace(name, params);
+    } else {
+      (navigation as any).replace(name, params);
+    }
+  };
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
   useEffect(() => {
     const initializeApp = async () => {
-      // 1. Enforce a minimum 2-second display timer for branding & loading experience
+      // Enforce a minimum 2-second display timer for branding & loading experience
       const timerPromise = new Promise((resolve) => setTimeout(resolve, 2000));
 
       let sessionRestored = false;
+      let savedPhone = '';
+      let hasMpin = false;
 
       try {
-        const accessToken = tokenStorage.getAccessToken();
-        const refreshToken = tokenStorage.getRefreshToken();
+        const accessToken = tokenStorage.getAccessToken() || await tokenStore.getAccessToken();
+        const refreshToken = tokenStorage.getRefreshToken() || await tokenStore.getRefreshToken();
+        savedPhone = await credentialsStore.getPhone() || '';
+        hasMpin = await credentialsStore.getHasMpin();
 
         if (accessToken && refreshToken) {
-          // Tokens exist locally, populate store and flag success
           dispatch(setTokens({ accessToken, refreshToken }));
           sessionRestored = true;
         } else if (refreshToken && !accessToken) {
-          // Edge case: Access token expired, attempt silent token refresh
+          // Attempt silent token refresh
           try {
-            await dispatch(refreshTokenThunk()).unwrap();
+            const result = await dispatch(refreshTokenThunk()).unwrap();
             sessionRestored = true;
           } catch (refreshErr) {
             console.warn('Silent token refresh failed during splash:', refreshErr);
-            // Clear dead tokens safely using verified tokenStorage method
             tokenStorage.clearTokens();
+            await tokenStore.clear();
           }
         }
       } catch (err) {
         console.warn('Failed to restore login session on startup:', err);
       }
 
-      // Ensure minimum 2 seconds have elapsed before routing
       await timerPromise;
 
-      // 2. Conditional navigation based on session status
+      // Conditional navigation based on session status and MPIN setup
       if (sessionRestored) {
-        navigation.replace('MainTabs', undefined as any);
+        if (savedPhone && hasMpin) {
+          replaceScreen('MpinLogin', { phone: savedPhone });
+        } else {
+          replaceScreen('MainTabs', undefined as any);
+        }
+      } else {
+        // If not authenticated, check if returning user with configured MPIN
+        if (savedPhone && hasMpin) {
+          replaceScreen('MpinLogin', { phone: savedPhone });
+        }
       }
-      // If not authenticated, user stays on this Splash/Landing screen layout to interact with CTAs
     };
 
     initializeApp();
@@ -75,9 +115,9 @@ export default function SplashScreen({ navigation }: Props) {
     <HeroBackground tone="navy">
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <View style={styles.logo}>
+          <Animated.View style={[styles.logo, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
             <Text style={styles.logoEmoji}>🏛️</Text>
-          </View>
+          </Animated.View>
           <Text style={styles.brand}>
             Paise<Text style={{ color: colors.amber }}>Wise</Text>
           </Text>

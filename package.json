@@ -6,7 +6,8 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "e2e": "maestro test e2e/auth-flow.yaml"
   },
   "dependencies": {
     "@expo/metro-runtime": "~3.2.3",
@@ -20,6 +21,7 @@
     "expo": "~51.0.28",
     "expo-dev-client": "~4.0.29",
     "expo-linear-gradient": "~13.0.2",
+    "expo-local-authentication": "^57.0.2",
     "expo-secure-store": "~13.0.2",
     "expo-status-bar": "~1.12.1",
     "mixpanel-react-native": "^3.6.0",
@@ -32,7 +34,7 @@
     "react-native-reanimated": "~3.10.1",
     "react-native-safe-area-context": "^4.10.5",
     "react-native-screens": "^3.31.1",
-    "react-native-svg": "15.2.0",
+    "react-native-svg": "^15.2.0",
     "react-native-web": "^0.19.13",
     "react-redux": "^9.3.0",
     "victory-native": "^41.26.0"

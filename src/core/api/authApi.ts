@@ -1,10 +1,8 @@
 import axios from 'axios';
-import { API_ENDPOINTS } from './apiEndpoints';
-
-const BASE_URL = 'http://192.168.29.179:8080';
+import { BASE_URL, API_ENDPOINTS } from './apiEndpoints';
 
 export interface SendOtpPayload {
-  email: string;
+  phone: string;
 }
 
 export interface VerifyOtpPayload {

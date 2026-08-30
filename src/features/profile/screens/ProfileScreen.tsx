@@ -15,11 +15,11 @@ export default function ProfileScreen() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const dispatch = useDispatch();
   const navigation = useNavigation<any>();
-  const refreshToken = useSelector((state: RootState) => state.auth.refreshToken);
+  const user = useSelector((state: RootState) => state.auth.user);
 
   const performLogout = async () => {
     try {
-     await dispatch(logoutUser() as any).unwrap();
+      await dispatch(logoutUser() as any).unwrap();
     } catch (err) {
       console.warn('API logout failed, clearing session anyway:', err);
     } finally {
@@ -82,7 +82,19 @@ export default function ProfileScreen() {
           <Text style={styles.settingLabel}>Daily reminders</Text>
           <Switch value={reminders} onValueChange={setReminders} trackColor={{ true: colors.green, false: colors.border }} thumbColor={colors.white} />
         </View>
-        <SettingRow emoji="🔒" label="Security & MPIN" chevron />
+
+        <SettingRow 
+          emoji="🔒" 
+          label="Security & MPIN" 
+          chevron 
+          onPress={() => {
+            if (user?.hasMpin) {
+              navigation.navigate('ResetMpin', { email: user.email || '', mode: 'change' });
+            } else {
+              navigation.navigate('SetMpin');
+            }
+          }} 
+        />
         <View style={styles.settingRow}>
           <Text style={styles.settingEmoji}>📄</Text>
           <Text style={styles.settingLabel}>KYC Status: Verified</Text>
@@ -130,9 +142,9 @@ export default function ProfileScreen() {
   );
 }
 
-function SettingRow({ emoji, label, chevron }: { emoji: string; label: string; chevron?: boolean }) {
+function SettingRow({ emoji, label, chevron, onPress }: { emoji: string; label: string; chevron?: boolean; onPress?: () => void }) {
   return (
-    <TouchableOpacity style={styles.settingRow} activeOpacity={0.8}>
+    <TouchableOpacity style={styles.settingRow} activeOpacity={0.8} onPress={onPress}>
       <Text style={styles.settingEmoji}>{emoji}</Text>
       <Text style={styles.settingLabel}>{label}</Text>
       {chevron && <Text style={styles.chevron}>›</Text>}
