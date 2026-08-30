@@ -245,7 +245,7 @@ export default function OnboardingScreen({ navigation }: Props) {
                           {g.title}
                         </Text>
                         <Text style={[styles.optionDesc, active && styles.optionDescActive]}>
-                          {g.description}
+                          {g.subtitle}
                         </Text>
                       </View>
                     </TouchableOpacity>

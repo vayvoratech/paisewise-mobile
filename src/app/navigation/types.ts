@@ -42,4 +42,5 @@ export type RootStackParamList = {
     mode?: 'buy' | 'sell';
   };
   Community: undefined;
+  SymbolSearch: undefined;
 };

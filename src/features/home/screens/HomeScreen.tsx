@@ -12,7 +12,7 @@ import { Card } from '../../../shared/ui/Card';
 import { ProgressBar } from '../../../shared/ui/ProgressBar';
 import { Pill } from '../../../shared/ui/Pill';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
-import { formatINR } from '../../../shared/utils/format';
+import { formatINR } from '../../../shared/format';
 import { MainTabsParamList, RootStackParamList } from '../../../app/navigation/types';
 import { PROFILE } from '../../profile/profile.data';
 import { tokenStorage } from '../../../core/api/tokenStorage';
@@ -110,7 +110,7 @@ export default function HomeScreen({ navigation }: Props) {
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={styles.statLabel}>LEVEL 4 LEARNER</Text>
-                  <Text style={styles.statXp}>{PROFILE.xp} XP</Text>
+                  <Text style={styles.statXp}>{PROFILE.xpTotal} XP</Text>
                   <Text style={styles.statLevel}>120 XP to next level</Text>
                 </View>
               </View>
