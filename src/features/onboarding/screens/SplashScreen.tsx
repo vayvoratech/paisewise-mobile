@@ -23,11 +23,11 @@ export default function SplashScreen({ navigation }: Props) {
         const accessToken = await tokenStore.getAccessToken();
         const refreshToken = await tokenStore.getRefreshToken();
         const savedPhone = await credentialsStore.getPhone();
-        const savedMpin = await credentialsStore.getMpin();
+        const hasMpin = await credentialsStore.getHasMpin();
 
         if (accessToken && refreshToken) {
           dispatch(setTokens({ accessToken, refreshToken }));
-          if (savedPhone && savedMpin) {
+          if (savedPhone && hasMpin) {
             navigation.replace('MpinLogin', { phone: savedPhone });
           } else {
             navigation.replace('MainTabs', undefined as any);
@@ -36,7 +36,7 @@ export default function SplashScreen({ navigation }: Props) {
         }
 
         // If no active session, check if returning user with configured MPIN
-        if (savedPhone && savedMpin) {
+        if (savedPhone && hasMpin) {
           navigation.replace('MpinLogin', { phone: savedPhone });
         }
       } catch (err) {

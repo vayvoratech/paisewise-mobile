@@ -15,6 +15,7 @@ const KEYS = {
   userPhone: 'auth.userPhone',
   userEmail: 'auth.userEmail',
   userMpin: 'auth.userMpin',
+  hasMpin: 'auth.hasMpin',
 } as const;
 
 const OPTIONS: SecureStore.SecureStoreOptions = {
@@ -89,6 +90,13 @@ export const credentialsStore = {
   getPhone: () => getItem(KEYS.userPhone),
   getEmail: () => getItem(KEYS.userEmail),
   getMpin: () => getItem(KEYS.userMpin),
+  async saveHasMpin(hasMpin: boolean): Promise<void> {
+    await setItem(KEYS.hasMpin, hasMpin ? 'true' : 'false');
+  },
+  async getHasMpin(): Promise<boolean> {
+    const val = await getItem(KEYS.hasMpin);
+    return val === 'true';
+  },
   async clearMpin(): Promise<void> {
     await removeItem(KEYS.userMpin);
   },
@@ -97,6 +105,7 @@ export const credentialsStore = {
       removeItem(KEYS.userPhone),
       removeItem(KEYS.userEmail),
       removeItem(KEYS.userMpin),
+      removeItem(KEYS.hasMpin),
     ]);
   },
 };

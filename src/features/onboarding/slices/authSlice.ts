@@ -34,6 +34,7 @@ export const loginUser = createAsyncThunk(
       }
       if (user && user.phone && user.email) {
         await credentialsStore.saveCredentials(user.phone, user.email);
+        await credentialsStore.saveHasMpin(!!user.hasMpin);
       }
       return response.data;
     } catch (err: any) {
@@ -54,6 +55,7 @@ export const loginUserMpin = createAsyncThunk(
       }
       if (user && user.phone && user.email) {
         await credentialsStore.saveCredentials(user.phone, user.email, payload.mpin);
+        await credentialsStore.saveHasMpin(true);
       }
       return response.data;
     } catch (err: any) {
@@ -72,6 +74,7 @@ export const configureMpin = createAsyncThunk(
       await axios.post(`${BASE_URL}/auth/set-mpin`, payload);
       const savedPhone = await credentialsStore.getPhone() || '';
       await credentialsStore.saveCredentials(savedPhone, payload.email, payload.mpin);
+      await credentialsStore.saveHasMpin(true);
       return payload.mpin;
     } catch (err: any) {
       const errMsg = err.response?.data?.message || err.message || 'Failed to configure MPIN';
@@ -91,6 +94,7 @@ export const registerUser = createAsyncThunk(
       }
       if (user && user.phone && user.email) {
         await credentialsStore.saveCredentials(user.phone, user.email);
+        await credentialsStore.saveHasMpin(false);
       }
       return response.data;
     } catch (err: any) {
@@ -111,7 +115,7 @@ export const logoutUser = createAsyncThunk(
       console.warn('API logout failed:', err.message);
     } finally {
       await tokenStore.clear();
-      await credentialsStore.clearMpin();
+      await credentialsStore.clearAll();
     }
   }
 );
@@ -126,7 +130,7 @@ const authSlice = createSlice({
       state.refreshToken = null;
       state.error = null;
       tokenStore.clear().catch(err => console.warn('Clear token store failed:', err));
-      credentialsStore.clearMpin().catch(err => console.warn('Clear MPIN failed:', err));
+      credentialsStore.clearAll().catch(err => console.warn('Clear credentials failed:', err));
     },
     setTokens(state, action: PayloadAction<{ accessToken: string; refreshToken: string }>) {
       state.accessToken = action.payload.accessToken;

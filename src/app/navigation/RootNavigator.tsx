@@ -56,9 +56,9 @@ function AppLockManager({ navigationRef }: { navigationRef: any }) {
         return;
       }
 
-      const savedMpin = await credentialsStore.getMpin();
+      const hasMpin = await credentialsStore.getHasMpin();
       const savedPhone = await credentialsStore.getPhone();
-      if (savedMpin && savedPhone) {
+      if (hasMpin && savedPhone) {
         navigationRef.navigate('MpinLogin', { phone: savedPhone, isUnlock: true });
       }
     };
