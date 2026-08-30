@@ -27,6 +27,10 @@ const PIN_LENGTH = 4;
 export default function MpinLoginScreen({ route, navigation }: Props) {
   const dispatch = useDispatch();
 
+  const user = useSelector((state: any) => state.auth.user);
+  const displayName = user?.name || '';
+  const avatarInitial = displayName ? displayName.charAt(0).toUpperCase() : '🔒';
+
   // Retrieve route params if passed, otherwise default to saved phone
   const routePhone = route.params?.phone;
 
@@ -189,9 +193,11 @@ export default function MpinLoginScreen({ route, navigation }: Props) {
         {/* Content body */}
         <View style={styles.body}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarEmoji}>🔒</Text>
+            <Text style={[styles.avatarEmoji, displayName ? styles.avatarText : null]}>
+              {avatarInitial}
+            </Text>
           </View>
-          <Text style={styles.title}>Enter MPIN</Text>
+          <Text style={styles.title}>{displayName ? `Hi, ${displayName}` : 'Enter MPIN'}</Text>
           <Text style={styles.subtitle}>Welcome back! Enter your 4-digit security PIN.</Text>
 
           {/* Secure Pin indicators */}
@@ -266,7 +272,7 @@ export default function MpinLoginScreen({ route, navigation }: Props) {
 
         {/* Footer options */}
         <View style={styles.footer}>
-          <TouchableOpacity onPress={() => navigation.navigate('ForgotPasswordScreen')}>
+          <TouchableOpacity onPress={() => navigation.navigate('ForgotPasswordScreen', { mode: 'mpin' })}>
             <Text style={styles.forgotMpin}>Forgot MPIN?</Text>
           </TouchableOpacity>
         </View>
@@ -290,6 +296,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   avatarEmoji: { fontSize: 36 },
+  avatarText: { fontSize: 32, fontWeight: 'bold', color: colors.amber },
   title: { ...typography.h1, color: colors.textOnDark, marginBottom: spacing.xs },
   subtitle: { ...typography.body, color: colors.textMutedDark, textAlign: 'center', marginBottom: spacing.xl },
   dotsContainer: { flexDirection: 'row', gap: spacing.xl, marginBottom: spacing.xl },

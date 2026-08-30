@@ -66,9 +66,13 @@ export default function ForgotPasswordScreen({ route, navigation }: { route: any
               <Text style={styles.back}>← Back</Text>
             </TouchableOpacity>
 
-            <Text style={styles.title}>Forgot Password</Text>
+            <Text style={styles.title}>{mode === 'mpin' ? 'Forgot MPIN' : 'Forgot Password'}</Text>
 
-            <Text style={styles.subtitle}>Enter your email to receive an OTP.</Text>
+            <Text style={styles.subtitle}>
+              {mode === 'mpin' 
+                ? 'Enter your email to receive an OTP to reset your login PIN.' 
+                : 'Enter your email to receive an OTP.'}
+            </Text>
 
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Email</Text>
