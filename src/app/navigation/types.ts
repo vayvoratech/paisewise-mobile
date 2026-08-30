@@ -27,6 +27,7 @@ export type RootStackParamList = {
   VerifyOtp: { email: string; mode?: 'password' | 'mpin' }; 
   ResetPassword: { email: string };
   Onboarding: undefined;
+  Auth: undefined;
   MainTabs: NavigatorScreenParams<MainTabsParamList>;
   Lesson: { lessonId: string };
   JargonBuster: { term: string };

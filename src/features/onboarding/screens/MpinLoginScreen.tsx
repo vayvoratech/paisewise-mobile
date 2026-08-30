@@ -185,7 +185,7 @@ export default function MpinLoginScreen({ route, navigation }: Props) {
       <SafeAreaView style={styles.container}>
         {/* Header toolbar */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+          <TouchableOpacity onPress={() => navigation.navigate('Auth', { screen: 'Login' } as any)}>
             <Text style={styles.backLink}>← Use Password</Text>
           </TouchableOpacity>
         </View>
@@ -272,7 +272,7 @@ export default function MpinLoginScreen({ route, navigation }: Props) {
 
         {/* Footer options */}
         <View style={styles.footer}>
-          <TouchableOpacity onPress={() => navigation.navigate('ForgotPasswordScreen', { mode: 'mpin' })}>
+          <TouchableOpacity onPress={() => navigation.navigate('Auth', { screen: 'ForgotPasswordScreen', params: { mode: 'mpin' } } as any)}>
             <Text style={styles.forgotMpin}>Forgot MPIN?</Text>
           </TouchableOpacity>
         </View>
