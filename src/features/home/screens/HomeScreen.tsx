@@ -80,7 +80,12 @@ export default function HomeScreen({ navigation }: Props) {
             <View style={styles.greetRow}>
               <View>
                 <Text style={styles.namaste}>NAMASTE 🙏</Text>
-                <Text style={styles.morning}>Hello, {PROFILE.name}</Text>
+                <View style={styles.morningRow}>
+                  <Text style={styles.morning}>Hello, {PROFILE.name}</Text>
+                  <View style={styles.streakBadge}>
+                    <Text style={styles.streakText}>🔥 {PROFILE.dayStreak} Days</Text>
+                  </View>
+                </View>
               </View>
               <TouchableOpacity style={styles.bell} activeOpacity={0.7}>
                 <Text style={styles.bellEmoji}>🔔</Text>
@@ -99,6 +104,21 @@ export default function HomeScreen({ navigation }: Props) {
               <Text style={styles.searchIcon}>🔍</Text>
               <Text style={styles.searchPlaceholder}>Search stocks, mutual funds...</Text>
             </TouchableOpacity>
+
+            {/* Nifty/Sensex Indices Strip */}
+            <View style={styles.indicesStrip}>
+              <View style={styles.indexBox}>
+                <Text style={styles.indexName}>NIFTY 50</Text>
+                <Text style={styles.indexVal}>24,320.50</Text>
+                <Text style={[styles.indexPct, { color: colors.green }]}>↑ +0.45%</Text>
+              </View>
+              <View style={styles.indexDivider} />
+              <View style={styles.indexBox}>
+                <Text style={styles.indexName}>SENSEX</Text>
+                <Text style={styles.indexVal}>79,850.30</Text>
+                <Text style={[styles.indexPct, { color: colors.green }]}>↑ +0.52%</Text>
+              </View>
+            </View>
 
             {/* Quick stats card */}
             <Card style={styles.statCard}>
@@ -132,6 +152,21 @@ export default function HomeScreen({ navigation }: Props) {
             <Text style={styles.seeAll}>GO TO SCHOOL</Text>
           </TouchableOpacity>
         </View>
+
+        <Card style={styles.lessonCard} onPress={() => navigation.navigate('Learn')}>
+          <View style={styles.lessonRow}>
+            <View style={styles.lessonIcon}>
+              <Text style={{ fontSize: 24 }}>🎓</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.lessonTitle}>Basics of Mutual Funds</Text>
+              <Text style={styles.lessonMeta}>Lesson 1 of 5 • 60% Completed</Text>
+              <View style={{ marginTop: 8 }}>
+                <ProgressBar progress={0.6} />
+              </View>
+            </View>
+          </View>
+        </Card>
 
         {/* Market Now */}
         <View style={[styles.sectionHead, { marginTop: spacing.xl }]}>
@@ -219,7 +254,10 @@ const styles = StyleSheet.create({
   heroInner: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xl },
   greetRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: spacing.xs },
   namaste: { ...typography.overline, color: colors.textMutedDark },
-  morning: { ...typography.h1, color: colors.textOnDark, marginTop: 4 },
+  morningRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  morning: { ...typography.h1, color: colors.textOnDark },
+  streakBadge: { backgroundColor: 'rgba(249, 115, 22, 0.18)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.sm, marginLeft: spacing.sm, alignSelf: 'center' },
+  streakText: { fontSize: 11, fontWeight: '700', color: colors.orange },
   bell: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' },
   bellEmoji: { fontSize: 22 },
   bellBadge: { position: 'absolute', top: 6, right: 6, backgroundColor: colors.pink, borderRadius: 9, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
@@ -227,6 +265,12 @@ const styles = StyleSheet.create({
   searchBarContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: radius.lg, paddingHorizontal: spacing.md, paddingVertical: 12, marginTop: spacing.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
   searchIcon: { fontSize: 16, marginRight: spacing.sm },
   searchPlaceholder: { color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: '500' },
+  indicesStrip: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: radius.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, marginTop: spacing.md, alignItems: 'center', justifyContent: 'space-around', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  indexBox: { alignItems: 'center' },
+  indexName: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.6)' },
+  indexVal: { fontSize: 13, fontWeight: '700', color: colors.textOnDark, marginTop: 2 },
+  indexPct: { fontSize: 10, fontWeight: '600', marginTop: 2 },
+  indexDivider: { width: 1, height: 28, backgroundColor: 'rgba(255,255,255,0.15)' },
   statCard: { marginTop: spacing.md },
   statRow: { flexDirection: 'row', justifyContent: 'space-between' },
   statLabel: { ...typography.overline, color: colors.textMutedDark },
