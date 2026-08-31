@@ -875,4 +875,142 @@ export const Analytics = {
   taxReportDownloaded(params: { report_type: string; report_period: string; file_format: string }) {
     mixpanel.track('tax_report_downloaded', { session_id: getSessionId(), ...params });
   },
+
+  // ==========================================
+  // 4. WEEK 3: COMMUNITY, NOTIFICATION, & SESSION LIFECYCLE EVENTS
+  // ==========================================
+
+  trackCommunityViewed(sessionId: string, entrySource: string, itemsShownCount: number) {
+    mixpanel.track('community_viewed', {
+      session_id: sessionId,
+      entry_source: entrySource,
+      items_shown_count: itemsShownCount,
+    });
+  },
+
+  trackCommunityFiltered(sessionId: string, filterType: string, filterValue: string, filterPrevious: string, resultsCount: number) {
+    mixpanel.track('community_filtered', {
+      session_id: sessionId,
+      filter_type: filterType,
+      filter_value: filterValue,
+      filter_previous: filterPrevious,
+      results_count: resultsCount,
+    });
+  },
+
+  trackPostTapped(sessionId: string, postId: string, sourcePosition: number) {
+    mixpanel.track('post_tapped', {
+      session_id: sessionId,
+      post_id: postId,
+      source_position: sourcePosition,
+    });
+  },
+
+  trackPostDetailViewed(sessionId: string, postId: string, postCategory: string, answerCount: number, upvoteCount: number) {
+    mixpanel.track('post_detail_viewed', {
+      session_id: sessionId,
+      post_id: postId,
+      post_category: postCategory,
+      answer_count: answerCount,
+      upvote_count: upvoteCount,
+    });
+  },
+
+  trackPostUpvoted(sessionId: string, postId: string, upvoteAction: string) {
+    mixpanel.track('post_upvoted', {
+      session_id: sessionId,
+      post_id: postId,
+      upvote_action: upvoteAction,
+    });
+  },
+
+  trackAnswerUpvoted(sessionId: string, answerId: string, postId: string, upvoteAction: string) {
+    mixpanel.track('answer_upvoted', {
+      session_id: sessionId,
+      answer_id: answerId,
+      post_id: postId,
+      upvote_action: upvoteAction,
+    });
+  },
+
+  trackAskQuestionTapped(sessionId: string, source: string) {
+    mixpanel.track('ask_question_tapped', {
+      session_id: sessionId,
+      source: source,
+    });
+  },
+
+  trackQuestionSubmitted(sessionId: string, questionId: string, category: string, language: string, hasAttachment: boolean) {
+    mixpanel.track('question_submitted', {
+      session_id: sessionId,
+      question_id: questionId,
+      category: category,
+      language: language,
+      has_attachment: hasAttachment,
+    });
+  },
+
+  trackAnswerSubmitted(sessionId: string, answerId: string, postId: string, language: string) {
+    mixpanel.track('answer_submitted', {
+      session_id: sessionId,
+      answer_id: answerId,
+      post_id: postId,
+      language: language,
+    });
+  },
+
+  trackPushNotificationReceived(sessionId: string | null, notificationId: string, notificationCategory: string, senderService: string) {
+    mixpanel.track('push_notification_received', {
+      session_id: sessionId,
+      notification_id: notificationId,
+      notification_category: notificationCategory,
+      sender_service: senderService,
+    });
+  },
+
+  trackPushNotificationTapped(sessionId: string, notificationId: string, notificationCategory: string, deepLinkTarget: string) {
+    mixpanel.track('push_notification_tapped', {
+      session_id: sessionId,
+      notification_id: notificationId,
+      notification_category: notificationCategory,
+      deep_link_target: deepLinkTarget,
+    });
+  },
+
+  trackNotificationPermissionGranted(sessionId: string, promptLocation: string, systemPromptAttemptCount: number) {
+    mixpanel.track('notification_permission_granted', {
+      session_id: sessionId,
+      prompt_location: promptLocation,
+      system_prompt_attempt_count: systemPromptAttemptCount,
+    });
+  },
+
+  trackNotificationPermissionDenied(sessionId: string, promptLocation: string, systemPromptAttemptCount: number) {
+    mixpanel.track('notification_permission_denied', {
+      session_id: sessionId,
+      prompt_location: promptLocation,
+      system_prompt_attempt_count: systemPromptAttemptCount,
+    });
+  },
+
+  trackSessionStarted(sessionId: string, startTrigger: string, appVersion: string, daysSinceLastSession: number) {
+    mixpanel.track('session_started', {
+      session_id: sessionId,
+      start_trigger: startTrigger,
+      app_version: appVersion,
+      days_since_last_session: daysSinceLastSession,
+    });
+  },
+
+  trackSessionEnded(sessionId: string, endReason: string, sessionDurationSeconds: number, screensViewedCount: number) {
+    mixpanel.track('session_ended', {
+      session_id: sessionId,
+      end_reason: endReason,
+      session_duration_seconds: sessionDurationSeconds,
+      screens_viewed_count: screensViewedCount,
+    });
+  },
+
 };
+
+export default Analytics;
