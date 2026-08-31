@@ -1,13 +1,40 @@
 /** Screen 09 — Community. Beginner-safe Hindi Q&A with verified helpers. */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Pill } from '../../../shared/ui/Pill';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { COMMUNITY_POSTS, ONLINE_COUNT, CommunityPost } from '../community.data';
+import Analytics from '../../../core/analyticsService';
 
 export default function CommunityScreen({ navigation }: any) {
   const [draft, setDraft] = useState('');
+  const sessionId = 'sess_abc123'; // Replace with your global session context identifier if available
+
+  // 1. Track community_viewed on mount (matching Week 3 Specification exact property names)
+  useEffect(() => {
+    if (typeof (Analytics as any).trackCommunityViewed === 'function') {
+      (Analytics as any).trackCommunityViewed(sessionId, 'bottom_nav', COMMUNITY_POSTS.length);
+    } else if (typeof (Analytics as any).logEvent === 'function') {
+      (Analytics as any).logEvent('community_viewed', {
+        session_id: sessionId,
+        entry_source: 'bottom_nav',
+        items_shown_count: COMMUNITY_POSTS.length,
+      });
+    }
+  }, []);
+
+  // 7. Track ask_question_tapped intent when interacting with the composer CTA
+  const handleAskQuestionFocus = () => {
+    if (typeof (Analytics as any).trackAskQuestionTapped === 'function') {
+      (Analytics as any).trackAskQuestionTapped(sessionId, 'community_home');
+    } else if (typeof (Analytics as any).logEvent === 'function') {
+      (Analytics as any).logEvent('ask_question_tapped', {
+        session_id: sessionId,
+        source: 'community_home',
+      });
+    }
+  };
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
@@ -33,8 +60,13 @@ export default function CommunityScreen({ navigation }: any) {
             <Text style={styles.safeText}>🔒 Safe space · Moderated daily · All beginners welcome</Text>
           </View>
 
-          {COMMUNITY_POSTS.map((post) => (
-            <PostCard key={post.id} post={post} />
+          {COMMUNITY_POSTS.map((post, index) => (
+            <PostCard 
+              key={post.id} 
+              post={post} 
+              index={index} 
+              sessionId={sessionId} 
+            />
           ))}
         </ScrollView>
 
@@ -46,8 +78,15 @@ export default function CommunityScreen({ navigation }: any) {
             placeholderTextColor={colors.textMuted}
             value={draft}
             onChangeText={setDraft}
+            onFocus={handleAskQuestionFocus}
           />
-          <TouchableOpacity style={styles.sendBtn} onPress={() => setDraft('')}>
+          <TouchableOpacity 
+            style={styles.sendBtn} 
+            onPress={() => {
+              handleAskQuestionFocus();
+              setDraft('');
+            }}
+          >
             <Text style={styles.sendIcon}>➤</Text>
           </TouchableOpacity>
         </View>
@@ -56,9 +95,35 @@ export default function CommunityScreen({ navigation }: any) {
   );
 }
 
-function PostCard({ post }: { post: CommunityPost }) {
+function PostCard({ post, index, sessionId }: { post: CommunityPost; index: number; sessionId: string }) {
+  // 3. Track post_tapped (matches Week 3 Specification property keys)
+  const handlePostPress = () => {
+    if (typeof (Analytics as any).trackPostTapped === 'function') {
+      (Analytics as any).trackPostTapped(sessionId, post.id, index);
+    } else if (typeof (Analytics as any).logEvent === 'function') {
+      (Analytics as any).logEvent('post_tapped', {
+        session_id: sessionId,
+        post_id: post.id,
+        source_position: index,
+      });
+    }
+  };
+
+  // 5. Track post_upvoted toggle action (matches Week 3 Specification property keys)
+  const handleUpvote = () => {
+    if (typeof (Analytics as any).trackPostUpvoted === 'function') {
+      (Analytics as any).trackPostUpvoted(sessionId, post.id, 'upvoted');
+    } else if (typeof (Analytics as any).logEvent === 'function') {
+      (Analytics as any).logEvent('post_upvoted', {
+        session_id: sessionId,
+        post_id: post.id,
+        upvote_action: 'upvoted',
+      });
+    }
+  };
+
   return (
-    <View style={styles.post}>
+    <TouchableOpacity activeOpacity={0.9} onPress={handlePostPress} style={styles.post}>
       <View style={styles.postHead}>
         <View style={[styles.avatar, { backgroundColor: post.avatarColor }]}>
           <Text style={styles.avatarText}>{post.initial}</Text>
@@ -73,6 +138,10 @@ function PostCard({ post }: { post: CommunityPost }) {
       <Pill label={post.tag} color={colors.purple} bg={colors.indigoChip} style={{ marginTop: spacing.md }} />
       <Text style={styles.postText}>{post.text}</Text>
 
+      <TouchableOpacity onPress={handleUpvote} style={{ marginTop: spacing.sm }}>
+        <Text style={{ color: colors.purple, fontWeight: '700' }}>👍 Upvote Post</Text>
+      </TouchableOpacity>
+
       {post.replies.map((r, i) => (
         <View key={i} style={styles.reply}>
           <View style={styles.replyHead}>
@@ -83,7 +152,7 @@ function PostCard({ post }: { post: CommunityPost }) {
           <Text style={styles.replyText}>{r.text}</Text>
         </View>
       ))}
-    </View>
+    </TouchableOpacity>
   );
 }
 
