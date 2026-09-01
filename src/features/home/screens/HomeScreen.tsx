@@ -19,6 +19,7 @@ import { tokenStorage } from '../../../core/api/tokenStorage';
 import type { RootState } from '../../../app/store';
 import { marketService } from '../../market/market.service';
 import { Stock } from '../../market/market.types';
+import { useFocusEffect } from '@react-navigation/native';
 import { apiClient } from '../../../core/api/apiClient';
 import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
 
@@ -47,7 +48,7 @@ export default function HomeScreen({ navigation }: Props) {
   const [streakData, setStreakData] = useState<{ currentStreak?: number; maxStreak?: number } | null>(null);
   const [progressData, setProgressData] = useState<{ progressPercent?: number } | null>(null);
 
-  const fetchHomeData = () => {
+  const fetchHomeData = useCallback(() => {
     marketService.getMarketStatus().then((res) => {
       if (res) {
         setIsMarketOpen(res.isMarketOpen);
@@ -71,13 +72,13 @@ export default function HomeScreen({ navigation }: Props) {
     apiClient.get(`${API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '')}/learn/progress`)
       .then(res => { if (res.data) setProgressData(res.data); })
       .catch(err => console.log('Progress fetch note:', err.message));
-  };
-
-  useEffect(() => {
-    console.log('Stored Access Token:', tokenStorage.getAccessToken());
-    console.log('Stored User ID:', tokenStorage.getUserId());
-    fetchHomeData();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchHomeData();
+    }, [fetchHomeData])
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -91,7 +92,7 @@ export default function HomeScreen({ navigation }: Props) {
   const gainPct = 4.3;
 
   const currentStreak = streakData?.currentStreak ?? profileData?.dayStreak ?? 0;
-  const displayName = profileData?.name || user?.name || user?.email?.split('@')[0] || 'Learner';
+  const displayName = user?.name || (profileData?.name && profileData?.name !== 'Investor' ? profileData.name : null) || user?.email?.split('@')[0] || 'Learner';
   const xpTotal = profileData?.xpTotal ?? 0;
   const level = profileData?.level ?? 1;
   const progressPct = progressData?.progressPercent ?? 0;

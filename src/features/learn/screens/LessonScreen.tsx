@@ -1,6 +1,6 @@
-/** Screens 04 + 05 — Lesson Screen with tappable jargon words and quiz CTA. */
-import React, { useEffect, useRef } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+/** Screens 04 + 05 — Lesson Screen with tappable jargon words, complete lesson action, and quiz CTA. */
+import React, { useEffect, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, NativeSyntheticEvent, NativeScrollEvent, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,27 +11,43 @@ import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { TODAYS_LESSON } from '../learn.data';
 import { JargonText } from '../components/JargonText';
-import { Analytics } from '../../../core/analyticsService'; // Import your Analytics service
+import { Analytics } from '../../../core/analyticsService';
+import { apiClient } from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Lesson'>;
 
-export default function LessonScreen({ navigation }: Props) {
-  const lesson = TODAYS_LESSON;
-  
-  // Track scroll depth milestones (25%, 50%, 75%, 100%)
+export default function LessonScreen({ navigation, route }: Props) {
+  const selectedLessonId = route.params?.lessonId || 'mf-1';
+  const [lessonData, setLessonData] = useState<any>(TODAYS_LESSON);
+  const [isCompleted, setIsCompleted] = useState(false);
+
+  useEffect(() => {
+    // Fetch dynamic lesson details from backend API
+    apiClient.get(`${API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '')}/learn/lessons/${selectedLessonId}`)
+      .then(res => {
+        if (res.data) {
+          setLessonData(res.data);
+        }
+      })
+      .catch(() => {
+        // Keep TODAYS_LESSON fallback if offline
+      });
+  }, [selectedLessonId]);
+
+  const lesson = lessonData || TODAYS_LESSON;
   const milestonesFired = useRef({ 25: false, 50: false, 75: false, 100: false });
 
-  // Track lesson_started using your Analytics service
   useEffect(() => {
     Analytics.lessonStarted({
-      sessionId: 'sess_abc123', // Replace with your active session ID variable/state
+      sessionId: 'sess_abc123',
       lessonId: lesson.id,
       lessonTitle: lesson.title,
-      chapterId: `chap_${lesson.chapterNo}`,
-      chapterName: lesson.chapter,
-      lessonOrder: lesson.index,
+      chapterId: `chap_${lesson.chapterNo || 1}`,
+      chapterName: lesson.chapter || 'Money Basics',
+      lessonOrder: lesson.index || 1,
       language: 'en',
-      totalBlocks: lesson.segments.length,
+      totalBlocks: lesson.segments?.length || 3,
       isResume: false,
       resumeBlockIndex: 0,
       estimatedMinutes: 3,
@@ -39,7 +55,6 @@ export default function LessonScreen({ navigation }: Props) {
   }, [lesson]);
 
   const openJargon = (term: string) => {
-    // Track jargon_term_tapped event using your Analytics service
     Analytics.jargonTermTapped({
       sessionId: 'sess_abc123',
       lessonId: lesson.id,
@@ -61,7 +76,6 @@ export default function LessonScreen({ navigation }: Props) {
     ([25, 50, 75, 100] as const).forEach((milestone) => {
       if (percentage >= milestone && !milestonesFired.current[milestone]) {
         milestonesFired.current[milestone] = true;
-        // Track lesson content scrolled using your Analytics service
         Analytics.lessonContentScrolled({
           sessionId: 'sess_abc123',
           lessonId: lesson.id,
@@ -73,8 +87,25 @@ export default function LessonScreen({ navigation }: Props) {
     });
   };
 
+  const handleCompleteLesson = async () => {
+    try {
+      await apiClient.post(`${API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '')}/learn/complete`, { lessonId: lesson.id });
+      setIsCompleted(true);
+      Alert.alert(
+        "🎉 Lesson Completed!",
+        "Great job! You earned +50 XP and extended your daily streak!",
+        [
+          { text: "Take Quiz ⭐", onPress: handleQuizPress },
+          { text: "Back to Lessons", onPress: () => navigation.goBack() }
+        ]
+      );
+    } catch (e) {
+      setIsCompleted(true);
+      Alert.alert("Lesson Marked Complete!", "Great job finishing this lesson!");
+    }
+  };
+
   const handleQuizPress = () => {
-    // Track quiz started using your Analytics service
     Analytics.quizStarted({
       sessionId: 'sess_abc123',
       lessonId: lesson.id,
@@ -82,7 +113,7 @@ export default function LessonScreen({ navigation }: Props) {
       totalQuestions: 5,
       language: 'en',
     });
-    navigation.navigate('Quiz');
+    navigation.navigate('Quiz', { lessonId: lesson.id });
   };
 
   return (
@@ -97,19 +128,19 @@ export default function LessonScreen({ navigation }: Props) {
         <LinearGradient colors={[colors.purple, colors.purpleDeep]} style={styles.header}>
           <SafeAreaView edges={['top']}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.chapterRow}>
-              <Text style={styles.chapter}>←  CHAPTER {lesson.chapterNo}  ·  {lesson.chapter.toUpperCase()}</Text>
+              <Text style={styles.chapter}>←  CHAPTER {lesson.chapterNo || 1}  ·  {(lesson.chapter || 'Money Basics').toUpperCase()}</Text>
             </TouchableOpacity>
             <View style={{ marginTop: spacing.lg }}>
-              <ProgressBar progress={lesson.index / lesson.total} color={colors.amber} trackColor="rgba(255,255,255,0.25)" />
+              <ProgressBar progress={(lesson.index || 1) / (lesson.total || 5)} color={colors.amber} trackColor="rgba(255,255,255,0.25)" />
             </View>
-            <Text style={styles.lessonNo}>LESSON {lesson.index} OF {lesson.total}</Text>
+            <Text style={styles.lessonNo}>LESSON {lesson.index || 1} OF {lesson.total || 5}</Text>
             <Text style={styles.title}>{lesson.title}</Text>
           </SafeAreaView>
         </LinearGradient>
 
         {/* Body */}
         <View style={styles.body}>
-          {lesson.segments.map((seg, i) => {
+          {(lesson.segments || []).map((seg: any, i: number) => {
             if (seg.type === 'emoji') {
               return (
                 <Card key={i} style={styles.emojiCard}>
@@ -130,7 +161,7 @@ export default function LessonScreen({ navigation }: Props) {
             }
             return (
               <Card key={i} style={styles.textCard}>
-                <JargonText text={seg.content} jargonWords={lesson.jargonWords} baseStyle={styles.paragraph} onPressTerm={openJargon} />
+                <JargonText text={seg.content} jargonWords={lesson.jargonWords || []} baseStyle={styles.paragraph} onPressTerm={openJargon} />
               </Card>
             );
           })}
@@ -140,8 +171,20 @@ export default function LessonScreen({ navigation }: Props) {
             <Text style={styles.hintText}>Tap any <Text style={styles.hintUnderline}>underlined word</Text> to understand it simply →</Text>
           </View>
 
-          <Button label="🎯 Ready? Take the quiz — Earn 50 XP!" variant="gradientPurple" style={{ marginTop: spacing.lg }} onPress={handleQuizPress} />
-          <Button label="Take Quiz & Earn 50 XP ⭐" variant="primary" style={{ marginTop: spacing.md }} onPress={handleQuizPress} />
+          {/* Clean Action Buttons */}
+          <Button 
+            label={isCompleted ? "✓ Lesson Completed (+50 XP)" : "Complete Lesson & Earn +50 XP"} 
+            variant={isCompleted ? "success" : "gradientPurple"} 
+            style={{ marginTop: spacing.lg }} 
+            onPress={handleCompleteLesson} 
+          />
+
+          <Button 
+            label="Take Quiz ⭐" 
+            variant="primary" 
+            style={{ marginTop: spacing.xs }} 
+            onPress={handleQuizPress} 
+          />
         </View>
       </ScrollView>
     </View>

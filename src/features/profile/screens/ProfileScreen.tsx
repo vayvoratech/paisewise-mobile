@@ -1,21 +1,36 @@
 /** Screen 12 — Profile & Settings. Badges, stats, preferences. */
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Card } from '../../../shared/ui/Card';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { BADGES, PROFILE } from '../profile.data';
 import { logoutUser } from '../../onboarding/slices/authSlice';
 import { RootState } from '../../../app/store';
+import { apiClient } from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
 
 export default function ProfileScreen() {
   const [reminders, setReminders] = useState(PROFILE.dailyReminders);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [profileData, setProfileData] = useState<{ name?: string; dayStreak?: number; xpTotal?: number; level?: number } | null>(null);
   const dispatch = useDispatch();
   const navigation = useNavigation<any>();
   const user = useSelector((state: RootState) => state.auth.user);
+
+  useFocusEffect(
+    useCallback(() => {
+      apiClient.get(`${API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '')}/profile/me`)
+        .then(res => {
+          if (res.data) {
+            setProfileData(res.data);
+          }
+        })
+        .catch(err => console.log('Profile fetch note:', err.message));
+    }, [])
+  );
 
   const performLogout = async () => {
     try {
@@ -58,6 +73,35 @@ export default function ProfileScreen() {
         bounces={true}
         overScrollMode="always"
       >
+        {/* User Profile Summary Card */}
+        <Card style={styles.profileHeaderCard}>
+          <View style={styles.profileRow}>
+            <View style={styles.avatar}>
+              <Text style={{ fontSize: 28 }}>👤</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.userName}>{user?.name || (profileData?.name && profileData?.name !== 'Investor' ? profileData.name : null) || user?.email?.split('@')[0] || 'Learner'}</Text>
+              <Text style={styles.userEmail}>{user?.email || 'authenticated_user'}</Text>
+            </View>
+          </View>
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Text style={styles.statVal}>⭐ {profileData?.xpTotal ?? user?.xpTotal ?? 0} XP</Text>
+              <Text style={styles.statLbl}>Total XP</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <Text style={styles.statVal}>🔥 {profileData?.dayStreak ?? user?.dayStreak ?? 0} Days</Text>
+              <Text style={styles.statLbl}>Current Streak</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <Text style={styles.statVal}>Lvl {profileData?.level ?? user?.level ?? 1}</Text>
+              <Text style={styles.statLbl}>Learner Level</Text>
+            </View>
+          </View>
+        </Card>
+
         {/* Badges Section */}
         <View style={styles.sectionHead}>
           <Text style={styles.sectionTitle}>Badges Earned</Text>
@@ -245,5 +289,62 @@ const styles = StyleSheet.create({
   modalConfirmText: {
     ...typography.bodyBold,
     color: colors.white,
+  },
+  profileHeaderCard: {
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    marginBottom: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  avatar: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: colors.indigoChip,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+  },
+  userName: {
+    ...typography.h2,
+    color: colors.text,
+  },
+  userEmail: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  statBox: {
+    alignItems: 'center',
+  },
+  statVal: {
+    ...typography.h3,
+    color: colors.purple,
+  },
+  statLbl: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: colors.border,
   }
 });

@@ -31,7 +31,7 @@ export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<MainTabsParamList>;
   Lesson: { lessonId: string };
   JargonBuster: { term: string };
-  Quiz: undefined;
+  Quiz: { lessonId?: string } | undefined;
   StockDetail: { symbol: string };
   BuySell: { symbol: string; action: 'BUY' | 'SELL'; mode?: 'buy' | 'sell' };
   TradeSuccess: {
