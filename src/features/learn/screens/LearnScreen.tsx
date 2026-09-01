@@ -1,5 +1,4 @@
-/** Learn tab — chapter/lesson hub. Opens the Lesson screen. */
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CompositeScreenProps } from '@react-navigation/native';
@@ -11,44 +10,69 @@ import { ProgressBar } from '../../../shared/ui/ProgressBar';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { MainTabsParamList, RootStackParamList } from '../../../app/navigation/types';
 import { TODAYS_LESSON } from '../learn.data';
-import { Analytics } from '../../../core/analyticsService'; // ✅ Import your analytics service
+import { Analytics } from '../../../core/analyticsService';
+import { apiClient } from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabsParamList, 'Learn'>,
   NativeStackScreenProps<RootStackParamList>
 >;
 
-const CHAPTERS = [
-  { no: 1, title: 'Money Basics', emoji: '💵', lessons: 5, done: 5 },
-  { no: 2, title: 'Stocks 101', emoji: '📈', lessons: 5, done: 5 },
-  { no: 3, title: 'Mutual Funds', emoji: '📊', lessons: 5, done: 2 },
-  { no: 4, title: 'Risk & Returns', emoji: '⚖️', lessons: 5, done: 0 },
+const BASE_CHAPTERS = [
+  { no: 1, title: 'Money Basics', emoji: '💵', lessons: 5 },
+  { no: 2, title: 'Stocks 101', emoji: '📈', lessons: 5 },
+  { no: 3, title: 'Mutual Funds', emoji: '📊', lessons: 5 },
+  { no: 4, title: 'Risk & Returns', emoji: '⚖️', lessons: 5 },
 ];
 
 export default function LearnScreen({ navigation }: Props) {
+  const [progressPercent, setProgressPercent] = useState<number>(0);
+
   useEffect(() => {
-  Analytics.lessonListViewed({
-    sessionId: 'sess_abc123',
-    chapterId: 'chap_1', // or your dynamic chapter id state/prop
-    chapterName: 'Introduction to Finance',
-    lessonsTotal: 5,
-    lessonsCompleted: 2,
-    language: 'en',
-  });
-}, []);
+    apiClient.get(`${API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '')}/learn/progress`)
+      .then(res => {
+        if (res.data && typeof res.data.progressPercent === 'number') {
+          setProgressPercent(res.data.progressPercent);
+        }
+      })
+      .catch(err => console.log('Learn progress fetch note:', err.message));
+
+    Analytics.lessonListViewed({
+      sessionId: 'sess_abc123',
+      chapterId: 'chap_1',
+      chapterName: 'Introduction to Finance',
+      lessonsTotal: 5,
+      lessonsCompleted: Math.round((progressPercent / 100) * 20),
+      language: 'en',
+    });
+  }, []);
 
   const handleLessonPress = (lessonId: string, lessonTitle: string, chapterNo: number) => {
-  Analytics.lessonTapped({
-    sessionId: 'sess_abc123',
-    lessonId: lessonId,
-    lessonTitle: lessonTitle,
-    lessonOrder: chapterNo, // or map to the correct property defined in your service
-    lessonStatus: 'available',
-    sourcePosition: 1,
-  });
+    Analytics.lessonTapped({
+      sessionId: 'sess_abc123',
+      lessonId: lessonId,
+      lessonTitle: lessonTitle,
+      lessonOrder: chapterNo,
+      lessonStatus: 'available',
+      sourcePosition: 1,
+    });
 
-  navigation.navigate('Lesson', { lessonId });
-};
+    navigation.navigate('Lesson', { lessonId });
+  };
+
+  const totalLessonsCount = 20;
+  const completedLessonsTotal = Math.floor((progressPercent / 100) * totalLessonsCount);
+
+  // Distribute completed lessons across chapters starting from Chapter 1
+  const chapters = BASE_CHAPTERS.map((c, idx) => {
+    const chapterStartLesson = idx * 5;
+    let done = 0;
+    if (completedLessonsTotal > chapterStartLesson) {
+      done = Math.min(5, completedLessonsTotal - chapterStartLesson);
+    }
+    return { ...c, done };
+  });
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
@@ -65,18 +89,18 @@ export default function LearnScreen({ navigation }: Props) {
             <View style={styles.continueRow}>
               <View style={styles.continueIcon}><Text style={{ fontSize: 24 }}>📊</Text></View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.continueChapter}>CHAPTER 3 · MUTUAL FUNDS</Text>
+                <Text style={styles.continueChapter}>CHAPTER 1 · MONEY BASICS</Text>
                 <Text style={styles.continueTitle}>{TODAYS_LESSON.title}</Text>
               </View>
               <Pill label="NEW" color={colors.purple} bg={colors.indigoChip} />
             </View>
             <View style={{ marginTop: spacing.md }}>
-              <ProgressBar progress={TODAYS_LESSON.index / TODAYS_LESSON.total} color={colors.amber} trackColor={colors.border} />
+              <ProgressBar progress={progressPercent / 100} color={colors.amber} trackColor={colors.border} />
             </View>
           </Card>
 
           <Text style={[styles.sectionTitle, { marginTop: spacing.xl }]}>All Chapters</Text>
-          {CHAPTERS.map((c) => (
+          {chapters.map((c) => (
             <Card 
               key={c.no} 
               style={styles.chapter} 

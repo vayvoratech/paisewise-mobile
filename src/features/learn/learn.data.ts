@@ -49,12 +49,12 @@ export const JARGON: Record<string, JargonTerm> = {
 };
 
 export const TODAYS_LESSON: Lesson = {
-  id: 'mf-3',
-  chapter: 'Mutual Funds',
-  chapterNo: 3,
-  index: 3,
+  id: 'mf-1',
+  chapter: 'Money Basics',
+  chapterNo: 1,
+  index: 1,
   total: 5,
-  title: 'What exactly is a Mutual Fund?',
+  title: 'Basics of Money & Wealth',
   jargonWords: ['dal bhat pot', 'Fund Manager', 'Mutual Fund'],
   quizXp: 50,
   segments: [
