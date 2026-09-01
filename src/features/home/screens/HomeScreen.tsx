@@ -184,7 +184,7 @@ export default function HomeScreen({ navigation }: Props) {
               <Text style={{ fontSize: 24 }}>🎓</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.lessonTitle}>Basics of Mutual Funds</Text>
+              <Text style={styles.lessonTitle}>Basics of Money & Wealth</Text>
               <Text style={styles.lessonMeta}>Lesson 1 of 5 • {Math.round(progressPct)}% Completed</Text>
               <View style={{ marginTop: 8 }}>
                 <ProgressBar progress={progressPct / 100} />

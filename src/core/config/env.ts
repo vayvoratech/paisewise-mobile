@@ -27,14 +27,14 @@ export type ServiceName = 'auth' | 'accounts' | 'payments' | 'profile';
 const extra = (Constants.expoConfig?.extra ?? {}) as Extra;
 
 export const ENV = {
-  apiGatewayUrl: extra.apiGatewayUrl ?? 'https://gateway.local/api',
+  apiGatewayUrl: extra.apiGatewayUrl ?? 'http://localhost:8080',
   services: {
     auth: extra.services?.auth ?? '/auth',
     accounts: extra.services?.accounts ?? '/accounts',
     payments: extra.services?.payments ?? '/payments',
     profile: extra.services?.profile ?? '/profile',
   } as Record<ServiceName, string>,
-  // Default to mocks until a real backend/gateway is wired in.
-  useMocks: extra.useMocks ?? true,
+  // Connect to live microservices gateway
+  useMocks: extra.useMocks ?? false,
   requestTimeoutMs: extra.requestTimeoutMs ?? 15_000,
 } as const;
