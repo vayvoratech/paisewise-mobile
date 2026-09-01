@@ -19,6 +19,8 @@ import { tokenStorage } from '../../../core/api/tokenStorage';
 import type { RootState } from '../../../app/store';
 import { marketService } from '../../market/market.service';
 import { Stock } from '../../market/market.types';
+import { apiClient } from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabsParamList, 'Home'>,
@@ -34,11 +36,16 @@ const QUICK_ACTIONS = [
 
 export default function HomeScreen({ navigation }: Props) {
   const holdingsValue = useSelector((state: RootState) => state.portfolio.holdingsValue);
+  const user = useSelector((state: RootState) => state.auth.user);
   const [refreshing, setRefreshing] = useState(false);
 
   const [isMarketOpen, setIsMarketOpen] = useState(false);
   const [gainers, setGainers] = useState<Stock[]>([]);
   const [losers, setLosers] = useState<Stock[]>([]);
+
+  const [profileData, setProfileData] = useState<{ name?: string; dayStreak?: number; xpTotal?: number; level?: number } | null>(null);
+  const [streakData, setStreakData] = useState<{ currentStreak?: number; maxStreak?: number } | null>(null);
+  const [progressData, setProgressData] = useState<{ progressPercent?: number } | null>(null);
 
   const fetchHomeData = () => {
     marketService.getMarketStatus().then((res) => {
@@ -52,6 +59,18 @@ export default function HomeScreen({ navigation }: Props) {
         setLosers(res.losers.slice(0, 3));
       }
     });
+
+    apiClient.get(`${API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '')}/profile/me`)
+      .then(res => { if (res.data) setProfileData(res.data); })
+      .catch(err => console.log('Profile fetch note:', err.message));
+
+    apiClient.get(`${API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '')}/learn/streak`)
+      .then(res => { if (res.data) setStreakData(res.data); })
+      .catch(err => console.log('Streak fetch note:', err.message));
+
+    apiClient.get(`${API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '')}/learn/progress`)
+      .then(res => { if (res.data) setProgressData(res.data); })
+      .catch(err => console.log('Progress fetch note:', err.message));
   };
 
   useEffect(() => {
@@ -71,6 +90,12 @@ export default function HomeScreen({ navigation }: Props) {
   const gain = 4320;
   const gainPct = 4.3;
 
+  const currentStreak = streakData?.currentStreak ?? profileData?.dayStreak ?? 0;
+  const displayName = profileData?.name || user?.name || user?.email?.split('@')[0] || 'Learner';
+  const xpTotal = profileData?.xpTotal ?? 0;
+  const level = profileData?.level ?? 1;
+  const progressPct = progressData?.progressPercent ?? 0;
+
   return (
     <View style={styles.root}>
       {/* SafeAreaView applied at the root container level to push content below notch */}
@@ -81,9 +106,9 @@ export default function HomeScreen({ navigation }: Props) {
               <View>
                 <Text style={styles.namaste}>NAMASTE 🙏</Text>
                 <View style={styles.morningRow}>
-                  <Text style={styles.morning}>Hello, {PROFILE.name}</Text>
+                  <Text style={styles.morning}>Hello, {displayName}</Text>
                   <View style={styles.streakBadge}>
-                    <Text style={styles.streakText}>🔥 {PROFILE.dayStreak} Days</Text>
+                    <Text style={styles.streakText}>🔥 {currentStreak} Days</Text>
                   </View>
                 </View>
               </View>
@@ -120,7 +145,7 @@ export default function HomeScreen({ navigation }: Props) {
               </View>
             </View>
 
-            {/* Quick stats card */}
+            {/* Account Performance Summary Card */}
             <Card style={styles.statCard}>
               <View style={styles.statRow}>
                 <View>
@@ -129,9 +154,9 @@ export default function HomeScreen({ navigation }: Props) {
                   <Text style={styles.statGain}>+{formatINR(gain)} (+{gainPct}%)</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={styles.statLabel}>LEVEL 4 LEARNER</Text>
-                  <Text style={styles.statXp}>{PROFILE.xpTotal} XP</Text>
-                  <Text style={styles.statLevel}>120 XP to next level</Text>
+                  <Text style={styles.statLabel}>LEVEL {level} LEARNER</Text>
+                  <Text style={styles.statXp}>{xpTotal} XP</Text>
+                  <Text style={styles.statLevel}>{Math.max(0, 500 - xpTotal)} XP to next level</Text>
                 </View>
               </View>
             </Card>
@@ -160,9 +185,9 @@ export default function HomeScreen({ navigation }: Props) {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.lessonTitle}>Basics of Mutual Funds</Text>
-              <Text style={styles.lessonMeta}>Lesson 1 of 5 • 60% Completed</Text>
+              <Text style={styles.lessonMeta}>Lesson 1 of 5 • {Math.round(progressPct)}% Completed</Text>
               <View style={{ marginTop: 8 }}>
-                <ProgressBar progress={0.6} />
+                <ProgressBar progress={progressPct / 100} />
               </View>
             </View>
           </View>
