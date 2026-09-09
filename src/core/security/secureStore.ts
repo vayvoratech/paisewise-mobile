@@ -12,6 +12,10 @@ import * as SecureStore from 'expo-secure-store';
 const KEYS = {
   accessToken: 'auth.accessToken',
   refreshToken: 'auth.refreshToken',
+  userPhone: 'auth.userPhone',
+  userEmail: 'auth.userEmail',
+  userMpin: 'auth.userMpin',
+  hasMpin: 'auth.hasMpin',
 } as const;
 
 const OPTIONS: SecureStore.SecureStoreOptions = {
@@ -68,6 +72,40 @@ export const tokenStore = {
     await Promise.all([
       removeItem(KEYS.accessToken),
       removeItem(KEYS.refreshToken),
+    ]);
+  },
+};
+
+export const credentialsStore = {
+  async saveCredentials(phone: string, email: string, mpin?: string): Promise<void> {
+    const promises = [
+      setItem(KEYS.userPhone, phone),
+      setItem(KEYS.userEmail, email),
+    ];
+    if (mpin) {
+      promises.push(setItem(KEYS.userMpin, mpin));
+    }
+    await Promise.all(promises);
+  },
+  getPhone: () => getItem(KEYS.userPhone),
+  getEmail: () => getItem(KEYS.userEmail),
+  getMpin: () => getItem(KEYS.userMpin),
+  async saveHasMpin(hasMpin: boolean): Promise<void> {
+    await setItem(KEYS.hasMpin, hasMpin ? 'true' : 'false');
+  },
+  async getHasMpin(): Promise<boolean> {
+    const val = await getItem(KEYS.hasMpin);
+    return val === 'true';
+  },
+  async clearMpin(): Promise<void> {
+    await removeItem(KEYS.userMpin);
+  },
+  async clearAll(): Promise<void> {
+    await Promise.all([
+      removeItem(KEYS.userPhone),
+      removeItem(KEYS.userEmail),
+      removeItem(KEYS.userMpin),
+      removeItem(KEYS.hasMpin),
     ]);
   },
 };

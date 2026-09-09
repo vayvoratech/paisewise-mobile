@@ -5,7 +5,6 @@ import { Stock, IndexQuote } from '../market.types';
 
 export type ConnectionStatus = 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'DISCONNECTED';
 
-
 export interface TickData {
   symbol: string;
   ltp: number;

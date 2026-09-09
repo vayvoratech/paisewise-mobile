@@ -3,7 +3,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { setConnectionStatus, updateLiveTick } from '../features/market/slices/marketSlice';
 
- const WS_URL = process.env.REACT_APP_WS_URL || 'wss://ws.example.com/ticks';
+const WS_URL = process.env.EXPO_PUBLIC_WS_URL || 'wss://stream.paisewise.in/v1/ticks';
 const MAX_RECONNECT_ATTEMPTS = 5;
 const INITIAL_RECONNECT_DELAY = 1000; // 1 second
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds

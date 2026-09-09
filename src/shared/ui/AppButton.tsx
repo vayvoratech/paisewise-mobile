@@ -1,10 +1,12 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
 
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+
 interface AppButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline';
+  variant?: ButtonVariant;
   loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
@@ -20,8 +22,7 @@ export const AppButton: React.FC<AppButtonProps> = ({
   style,
   textStyle,
 }) => {
-  const isOutline = variant === 'outline';
-  const isSecondary = variant === 'secondary';
+  const spinnerColor = variant === 'outline' || variant === 'ghost' ? '#007AFF' : '#fff';
 
   return (
     <TouchableOpacity
@@ -29,22 +30,18 @@ export const AppButton: React.FC<AppButtonProps> = ({
       disabled={disabled || loading}
       style={[
         styles.base,
-        isPrimary(variant) && styles.primary,
-        isSecondary && styles.secondary,
-        isOutline && styles.outline,
+        styles[variant],
         (disabled || loading) && styles.disabled,
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={isOutline ? '#007AFF' : '#fff'} />
+        <ActivityIndicator color={spinnerColor} />
       ) : (
         <Text
           style={[
             styles.textBase,
-            isPrimary(variant) && styles.primaryText,
-            isSecondary && styles.secondaryText,
-            isOutline && styles.outlineText,
+            styles[`${variant}Text` as keyof typeof styles],
             textStyle,
           ]}
         >
@@ -55,16 +52,18 @@ export const AppButton: React.FC<AppButtonProps> = ({
   );
 };
 
-const isPrimary = (v: string) => v === 'primary';
-
 const styles = StyleSheet.create({
   base: { height: 48, borderRadius: 8, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16 },
   primary: { backgroundColor: '#007AFF' },
   secondary: { backgroundColor: '#E5E5EA' },
   outline: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#007AFF' },
+  ghost: { backgroundColor: 'transparent' },
+  danger: { backgroundColor: '#FF3B30' },
   disabled: { opacity: 0.5 },
   textBase: { fontSize: 16, fontWeight: '600' },
   primaryText: { color: '#FFFFFF' },
   secondaryText: { color: '#000000' },
   outlineText: { color: '#007AFF' },
+  ghostText: { color: '#007AFF' },
+  dangerText: { color: '#FFFFFF' },
 });

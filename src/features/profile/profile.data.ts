@@ -18,14 +18,14 @@ export type UserProfile = {
 };
 
 export const PROFILE: UserProfile = {
-  name: 'Rahul Sharma',
-  handle: '@rahul_invests',
-  city: 'Jaipur',
-  level: 3,
-  dayStreak: 7,
-  xpTotal: 1240,
-  lessonsCompleted: 12,
-  language: 'Hindi',
+  name: 'Learner',
+  handle: '@learner',
+  city: 'India',
+  level: 1,
+  dayStreak: 0,
+  xpTotal: 0,
+  lessonsCompleted: 0,
+  language: 'English',
   dailyReminders: true,
   kycVerified: true,
 };

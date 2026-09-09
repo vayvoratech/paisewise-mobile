@@ -13,14 +13,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { HeroBackground } from '../../../shared/ui/HeroBackground';
 import { Button } from '../../../shared/ui/Button';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { GOALS } from '../goals.data';
 import { setGoal, setLanguage } from '../slices/authSlice';
-import { RootState } from '../../../app/store';
 import mixpanel from '@core/mixpanel'; // Import mixpanel instance
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
@@ -30,7 +29,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const LANGUAGES = [
   { code: 'en', name: 'English' },
   { code: 'hi', name: 'हिन्दी (Hindi)' },
-  { code: 'as', name: 'অসমীয়া (Assamese)' },
+  { code: 'as', name: 'অસમীয়া (Assamese)' },
   { code: 'bn', name: 'বাংলা (Bengali)' },
   { code: 'brx', name: 'बड़ो (Bodo)' },
   { code: 'doi', name: 'डोगरी (Dogri)' },
@@ -40,10 +39,10 @@ const LANGUAGES = [
   { code: 'kok', name: 'कोंकणी (Konkani)' },
   { code: 'mai', name: 'मैथिली (Maithili)' },
   { code: 'ml', name: 'മലയാളം (Malayalam)' },
-  { code: 'mni', name: 'മണിപ്പൂരി (Manipuri)' },
+  { code: 'mni', name: 'മணிപ്പൂരി (Manipuri)' },
   { code: 'mr', name: 'मराठी (Marathi)' },
   { code: 'ne', name: 'नेपाली (Nepali)' },
-  { code: 'or', name: 'ଓଡ଼ିଆ (Odia)' },
+  { code: 'or', name: 'ଓଡ଼ିआ (Odia)' },
   { code: 'pa', name: 'ਪੰਜਾਬੀ (Punjabi)' },
   { code: 'sa', name: 'संस्कृतम् (Sanskrit)' },
   { code: 'sat', name: 'संथाली (Santali)' },
@@ -55,14 +54,9 @@ const LANGUAGES = [
 
 export default function OnboardingScreen({ navigation }: Props) {
   const dispatch = useDispatch();
-  
-  // Sourced from Redux with local overrides before final save
-  const reduxLang = useSelector((state: RootState) => state.auth.language) || 'English';
-  const reduxGoal = useSelector((state: RootState) => state.auth.goal) || 'learn';
-  
-  const [selectedLang, setSelectedLang] = useState(reduxLang);
-  const [selectedGoal, setSelectedGoal] = useState(reduxGoal);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [selectedLang, setSelectedLang] = useState('English');
+  const [selectedGoal, setSelectedGoal] = useState('learn');
   const [langModalVisible, setLangModalVisible] = useState(false);
   
   const flatListRef = useRef<FlatList>(null);
@@ -74,7 +68,7 @@ export default function OnboardingScreen({ navigation }: Props) {
       title: 'Welcome to PaiseWise',
       titleHi: 'पैसेवाइज़ में आपका स्वागत है',
       desc: 'Your companion to learn smart financial and investing decisions. Start your journey today!',
-      descHi: 'वित्तीय और निवेश के स्मार्ट निर्णय सीखने के लिए आपका साथी। आज ही अपनी यात्रा शुरू करें!',
+      descHi: 'वित्तीय and निवेश के स्मार्ट निर्णय सीखने के लिए आपका साथी। आज ही अपनी यात्रा शुरू करें!',
       emoji: '🏛️',
       bullets: [
         { emoji: '💡', text: 'Learn mutual funds, stock market, and SIPs', textHi: 'म्यूचुअल फंड, शेयर बाजार और एसआईपी सीखें' },
@@ -103,31 +97,31 @@ export default function OnboardingScreen({ navigation }: Props) {
       descHi: 'बिना किसी वास्तविक जोखिम के आभासी धन के साथ वास्तविक समय में अपनी स्टॉक ट्रेडिंग रणनीतियों का परीक्षण करें।',
       emoji: '📈',
       bullets: [
-        { emoji: '💰', text: 'Start with virtual cash balance of ₹1,00,000', textHi: '₹1,00,000 के आभासी नकद बैलेंस के साथ शुरुआत करें' },
-        { emoji: '⚡', text: 'Real-time order simulation matching active market', textHi: 'सक्रिय बाजार से मेल खाने वाला रीयल-टाइम ऑर्डर सिमुलेशन' },
-        { emoji: '🛡️', text: 'Learn and fail safely before committing actual money', textHi: 'वास्तविक धन लगाने से पहले सुरक्षित रूप से सीखें और असफल हों' }
+        { emoji: '💰', text: 'Start with ₹1,00,000 virtual balance to trade', textHi: 'ट्रेडिंग के लिए ₹1,00,000 आभासी शेष राशि से शुरू करें' },
+        { emoji: '⚡', text: 'Real-time NSE market stock quotes feed', textHi: 'वास्तविक समय एनएसई बाजार स्टॉक कोट्स फ़ीड' },
+        { emoji: '📊', text: 'Analyze charts and track your virtual portfolio PnL', textHi: 'चार्ट का विश्लेषण करें और अपने आभासी पोर्टफोलियो पीएनएल को ट्रैक करें' }
       ]
     },
     {
-      id: 'track',
-      title: 'Track Portfolio & Insights',
-      titleHi: 'पोर्टफोलियो और समुदाय',
-      desc: 'Review clear, plain-English P&L summaries of your virtual holdings and connect with a helpful community.',
-      descHi: 'अपनी आभासी होल्डिंग्स के स्पष्ट पीएंडएल सारांश की समीक्षा करें और मददगार समुदाय से जुड़ें।',
-      emoji: '💼',
+      id: 'community',
+      title: 'Active Community',
+      titleHi: 'सक्रिय समुदाय',
+      desc: 'Discuss strategies with fellow learners, ask doubts, and share progress updates on the social board.',
+      descHi: 'साथी शिक्षार्थियों के साथ रणनीतियों पर चर्चा करें, संदेह पूछें, और सोशल बोर्ड पर प्रगति साझा करें।',
+      emoji: '👥',
       bullets: [
-        { emoji: '📊', text: 'Track net holdings valuation and daily P&L return metrics', textHi: 'नेट होल्डिंग्स वैल्यूएशन और दैनिक पीएंडएल रिटर्न मेट्रिक्स को ट्रैक करें' },
-        { emoji: '🤝', text: 'Discuss questions and trade ideas on community boards', textHi: 'कम्युनिटी बोर्ड पर प्रश्नों और ट्रेड विचारों पर चर्चा करें' },
-        { emoji: '🔒', text: 'Secure transaction logs ledger database tracking entries', textHi: 'सुरक्षित लेनदेन लॉग लेजर डेटाबेस प्रविष्टियों को ट्रैक करता है' }
+        { emoji: '💬', text: 'Post queries and get answers from experts', textHi: 'प्रश्न पोस्ट करें और विशेषज्ञों से उत्तर प्राप्त करें' },
+        { emoji: '🤝', text: 'Share your paper trading success badges', textHi: 'अपने पेपर ट्रेडिंग सफलता बैज साझा करें' },
+        { emoji: '🔥', text: 'Maintain learning streaks and compete on leaderboards', textHi: 'सीखने के सिलसिले को बनाए रखें और लीडरबोर्ड पर प्रतिस्पर्धा करें' }
       ]
     },
     {
-      id: 'goal',
-      title: 'Select Your Goal',
-      titleHi: 'अपना निवेश लक्ष्य चुनें',
-      desc: 'We will personalize your customized learning path and dictionary terms based on your selection.',
-      descHi: 'हम आपके चयन के आधार पर आपके कस्टमाइज़्ड लर्निंग पाथ और डिक्शनरी टर्म्स को कस्टमाइज़ करेंगे।',
-      emoji: '🎯',
+      id: 'preferences',
+      title: 'Choose Preferences',
+      titleHi: 'अपनी प्राथमिकताएं चुनें',
+      desc: 'Customize your language and learning goal to begin your personalized financial school journey.',
+      descHi: 'अपनी व्यक्तिगत वित्तीय स्कूल यात्रा शुरू करने के लिए अपनी भाषा और सीखने के लक्ष्य को अनुकूलित करें।',
+      emoji: '⚙️',
       bullets: []
     }
   ];
@@ -207,164 +201,154 @@ export default function OnboardingScreen({ navigation }: Props) {
     const isHindi = selectedLang === 'हिन्दी (Hindi)';
     const titleText = isHindi ? item.titleHi : item.title;
     const descText = isHindi ? item.descHi : item.desc;
-    
-    return (
-      <View style={styles.slideContainer}>
-        <View style={styles.slideHeader}>
-          <Text style={styles.emoji}>{item.emoji}</Text>
-        </View>
-        
-        <View style={styles.slideBody}>
-          <Text style={styles.title}>{titleText}</Text>
-          <Text style={styles.desc}>{descText}</Text>
+    const isPrefSlide = item.id === 'preferences';
 
-          {/* Detailed Bullet Highlights */}
-          {item.bullets && item.bullets.length > 0 && (
-            <View style={styles.bulletsContainer}>
-              {item.bullets.map((b, i) => {
-                const bulletText = isHindi ? b.textHi : b.text;
-                return (
-                  <View key={i} style={styles.bulletRow}>
-                    <Text style={styles.bulletEmoji}>{b.emoji}</Text>
-                    <Text style={styles.bulletText}>{bulletText}</Text>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-          
-          {/* Welcome Screen Interactive Language Dropdown */}
-          {item.id === 'welcome' && (
-            <View style={styles.languageContainer}>
-              <Text style={styles.pickerLabel}>
-                {isHindi ? 'अपनी भाषा चुनें / Select Language:' : 'Select Language / अपनी भाषा चुनें:'}
-              </Text>
+    return (
+      <View style={styles.slide}>
+        <View style={styles.slideHeader}>
+          <Text style={styles.slideEmoji}>{item.emoji}</Text>
+          <Text style={styles.slideTitle}>{titleText}</Text>
+          <Text style={styles.slideDesc}>{descText}</Text>
+        </View>
+
+        {isPrefSlide ? (
+          <ScrollView style={styles.prefScroll} contentContainerStyle={styles.prefContent} showsVerticalScrollIndicator={false}>
+            {/* Language Selection Trigger */}
+            <View style={styles.prefSection}>
+              <Text style={styles.sectionTitle}>Preferred Language / भाषा</Text>
               <TouchableOpacity
-                style={styles.dropdown}
                 activeOpacity={0.8}
                 onPress={() => setLangModalVisible(true)}
+                style={styles.langSelector}
               >
-                <Text style={styles.dropdownText}>{selectedLang}</Text>
-                <Text style={styles.dropdownArrow}>▼</Text>
+                <Text style={styles.langSelectorText}>{selectedLang}</Text>
+                <Text style={styles.dropdownIcon}>▼</Text>
               </TouchableOpacity>
             </View>
-          )}
 
-          {/* Goal Setup interactive cards on the last slide */}
-          {item.id === 'goal' && (
-            <ScrollView 
-              style={styles.goalsList} 
-              contentContainerStyle={styles.goalsContent}
-              showsVerticalScrollIndicator={false}
-              nestedScrollEnabled={true}
-            >
-              {GOALS.map((g) => {
-                const active = selectedGoal === g.id;
-                return (
-                  <TouchableOpacity
-                    key={g.id}
-                    activeOpacity={0.85}
-                    onPress={() => handleGoalSelect(g.id)}
-                    style={[styles.option, active && styles.optionActive]}
-                  >
-                    <Text style={styles.optionEmoji}>{g.emoji}</Text>
-                    <View style={styles.optionText}>
-                      <Text style={styles.optionTitle}>{g.title}</Text>
-                      <Text style={styles.optionSub}>{g.subtitle}</Text>
-                    </View>
-                    <View style={[styles.radio, active && styles.radioActive]}>
-                      {active && <Text style={styles.radioCheck}>✓</Text>}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          )}
-        </View>
+            {/* Learning Goal Selector */}
+            <View style={styles.prefSection}>
+              <Text style={styles.sectionTitle}>Select Your Learning Goal</Text>
+              <View style={styles.optionsList}>
+                {GOALS.map((g) => {
+                  const active = selectedGoal === g.id;
+                  return (
+                    <TouchableOpacity
+                      key={g.id}
+                      activeOpacity={0.85}
+                      onPress={() => handleGoalSelect(g.id)}
+                      style={[styles.option, active && styles.optionActive]}
+                    >
+                      <Text style={styles.optionEmoji}>{g.emoji}</Text>
+                      <View style={styles.optionBody}>
+                        <Text style={[styles.optionTitle, active && styles.optionTitleActive]}>
+                          {g.title}
+                        </Text>
+                        <Text style={[styles.optionDesc, active && styles.optionDescActive]}>
+                          {g.subtitle}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </ScrollView>
+        ) : (
+          <View style={styles.bulletsList}>
+            {item.bullets.map((b, bIdx) => (
+              <View key={bIdx} style={styles.bulletRow}>
+                <Text style={styles.bulletEmoji}>{b.emoji}</Text>
+                <Text style={styles.bulletText}>{isHindi ? b.textHi : b.text}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
     );
   };
 
-  const isHindi = selectedLang === 'हिन्दी (Hindi)';
+  const handleSkip = () => {
+    // Track onboarding skip
+    mixpanel.track('onboarding_skipped', {
+      current_step: activeIndex + 1,
+    });
+    onSubmit();
+  };
 
   return (
     <HeroBackground tone="navy">
       <SafeAreaView style={styles.safe}>
-        
-        {/* Top Header Row with Skip Button */}
-        <View style={styles.topRow}>
-          <Text style={styles.logoName}>PaiseWise</Text>
-          <TouchableOpacity activeOpacity={0.7} onPress={onSubmit} style={styles.skipButton}>
-            <Text style={styles.skipText}>{isHindi ? 'छोड़ें (Skip)' : 'Skip'}</Text>
-          </TouchableOpacity>
+        {/* Header Bar */}
+        <View style={styles.header}>
+          <Text style={styles.stepIndicator}>
+            Step {activeIndex + 1} of {slides.length}
+          </Text>
+          {activeIndex < slides.length - 1 && (
+            <TouchableOpacity onPress={handleSkip}>
+              <Text style={styles.skipBtn}>Skip</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
+        {/* Carousel FlatList */}
         <FlatList
           ref={flatListRef}
           data={slides}
           renderItem={renderSlide}
+          keyExtractor={(item) => item.id}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
           onScroll={handleScroll}
           scrollEventThrottle={16}
-          getItemLayout={(data, index) => ({
-            length: SCREEN_WIDTH,
-            offset: SCREEN_WIDTH * index,
-            index,
-          })}
-          keyExtractor={(item) => item.id}
-          style={styles.flatList}
+          scrollEnabled={activeIndex < slides.length - 1} // Lock scrolling on last slide to force preference selections
         />
 
-        {/* Footer Navigation Bar */}
+        {/* Footer Navigation Area */}
         <View style={styles.footer}>
           {/* Dot Indicators */}
-          <View style={styles.dotsContainer}>
-            {slides.map((_, i) => (
+          <View style={styles.indicatorContainer}>
+            {slides.map((_, idx) => (
               <View
-                key={i}
+                key={idx}
                 style={[
                   styles.dot,
-                  i === activeIndex ? styles.dotActive : styles.dotInactive
+                  activeIndex === idx && styles.dotActive
                 ]}
               />
             ))}
           </View>
 
-          {/* Action Button */}
-          <View style={styles.btnWrapper}>
-            <Button
-              label={
-                activeIndex === slides.length - 1
-                  ? isHindi ? 'शुरू करें (Get Started)' : 'Get Started'
-                  : isHindi ? 'अगला (Next)  →' : 'Next  →'
-              }
-              variant="gradientAmber"
-              onPress={handleNext}
-            />
-          </View>
+          {/* Navigation Action Buttons */}
+          <Button
+            label={activeIndex === slides.length - 1 ? "शुरू करें — Let's Go 🚀" : "Next →"}
+            variant="gradientAmber"
+            onPress={handleNext}
+          />
         </View>
 
-        {/* Custom Custom Language Selection Modal Dropdown */}
+        {/* Language Selection Bottom Sheet Modal */}
         <Modal
-          visible={langModalVisible}
+          animationType="slide"
           transparent={true}
-          animationType="fade"
+          visible={langModalVisible}
           onRequestClose={() => setLangModalVisible(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+            <View style={styles.modalSheet}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Choose Language</Text>
+                <Text style={styles.modalTitle}>Choose Language / भाषा चुनें</Text>
                 <TouchableOpacity onPress={() => setLangModalVisible(false)}>
-                  <Text style={styles.modalClose}>✕</Text>
+                  <Text style={styles.closeModalText}>✕</Text>
                 </TouchableOpacity>
               </View>
-              <ScrollView style={styles.modalScroll}>
+
+              <ScrollView style={styles.langList} showsVerticalScrollIndicator={false}>
                 {LANGUAGES.map((lang) => (
                   <TouchableOpacity
                     key={lang.code}
+                    activeOpacity={0.7}
                     style={[
                       styles.langItem,
                       selectedLang === lang.name && styles.langItemActive
@@ -377,14 +361,15 @@ export default function OnboardingScreen({ navigation }: Props) {
                     ]}>
                       {lang.name}
                     </Text>
-                    {selectedLang === lang.name && <Text style={styles.langCheck}>✓</Text>}
+                    {selectedLang === lang.name && (
+                      <Text style={styles.checkIcon}>✓</Text>
+                    )}
                   </TouchableOpacity>
                 ))}
               </ScrollView>
             </View>
           </View>
         </Modal>
-
       </SafeAreaView>
     </HeroBackground>
   );
@@ -392,247 +377,207 @@ export default function OnboardingScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  topRow: {
+  header: {
+    height: 50,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
   },
-  logoName: {
-    ...typography.h3,
-    color: colors.white,
-    fontWeight: '700',
-  },
-  skipButton: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-  },
-  skipText: {
-    ...typography.caption,
-    color: colors.textMutedDark,
-    fontWeight: '600',
-  },
-  flatList: { flex: 1 },
-  slideContainer: {
+  stepIndicator: { ...typography.overline, color: colors.textMutedDark },
+  skipBtn: { ...typography.bodyBold, color: colors.amber },
+  slide: {
     width: SCREEN_WIDTH,
+    paddingHorizontal: spacing.xl,
+    justifyContent: 'space-between',
     flex: 1,
-    justifyContent: 'flex-start',
-    alignItems: 'center',
   },
   slideHeader: {
-    height: '25%',
-    justifyContent: 'center',
     alignItems: 'center',
-  },
-  emoji: { fontSize: 80 },
-  slideBody: {
-    width: SCREEN_WIDTH - (spacing.xl * 2),
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    padding: spacing.xl,
-    alignItems: 'center',
-  },
-  title: {
-    ...typography.h1,
-    color: colors.text,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  desc: {
-    ...typography.body,
-    color: colors.textMuted,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: spacing.xl,
-  },
-  // Language styling
-  languageContainer: {
-    width: '100%',
     marginTop: spacing.xl,
-    alignItems: 'center',
   },
-  pickerLabel: {
-    ...typography.caption,
-    color: colors.textMuted,
+  slideEmoji: {
+    fontSize: 72,
     marginBottom: spacing.md,
-    fontWeight: '600',
   },
-  dropdown: {
+  slideTitle: {
+    ...typography.h1,
+    color: colors.textOnDark,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  slideDesc: {
+    ...typography.body,
+    color: colors.textMutedDark,
+    textAlign: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  bulletsList: {
+    marginVertical: spacing.xxl,
+    paddingHorizontal: spacing.sm,
+    gap: spacing.lg,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  bulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  bulletEmoji: {
+    fontSize: 22,
+  },
+  bulletText: {
+    ...typography.body,
+    color: colors.textOnDark,
+    flex: 1,
+  },
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
+    gap: spacing.lg,
+  },
+  indicatorContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  dotActive: {
+    backgroundColor: colors.amber,
+    width: 20,
+  },
+  prefScroll: {
+    flex: 1,
+    marginTop: spacing.md,
+  },
+  prefContent: {
+    paddingBottom: spacing.xl,
+  },
+  prefSection: {
+    marginTop: spacing.lg,
+  },
+  sectionTitle: {
+    ...typography.overline,
+    color: colors.textMutedDark,
+    marginBottom: spacing.sm,
+  },
+  langSelector: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    width: '80%',
-    padding: spacing.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: colors.borderDark,
     borderWidth: 1.5,
-    borderColor: colors.border,
     borderRadius: radius.md,
-    backgroundColor: colors.surfaceMuted,
+    padding: spacing.lg,
   },
-  dropdownText: {
+  langSelectorText: {
     ...typography.bodyBold,
-    color: colors.text,
+    color: colors.textOnDark,
   },
-  dropdownArrow: {
-    color: colors.textMuted,
+  dropdownIcon: {
+    color: colors.textMutedDark,
     fontSize: 12,
   },
-  // Goals list styling
-  goalsList: {
-    width: '100%',
-    flex: 1,
-  },
-  goalsContent: {
-    gap: spacing.sm,
-    paddingBottom: spacing.xl,
+  optionsList: {
+    gap: spacing.md,
   },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceMuted,
+    padding: spacing.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1.5,
+    borderColor: colors.borderDark,
     borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    gap: spacing.md,
   },
   optionActive: {
-    backgroundColor: colors.yellowCard,
     borderColor: colors.amber,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
-  optionEmoji: { fontSize: 24, marginRight: spacing.md },
-  optionText: { flex: 1 },
-  optionTitle: { ...typography.bodyBold, color: colors.text, fontSize: 14 },
-  optionSub: { ...typography.caption, color: colors.textMuted, marginTop: 2, fontSize: 11 },
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
+  optionEmoji: {
+    fontSize: 28,
   },
-  radioActive: {
-    backgroundColor: colors.amber,
-    borderColor: colors.amber,
+  optionBody: {
+    flex: 1,
   },
-  radioCheck: { color: colors.white, fontWeight: '800', fontSize: 10 },
-  continue: { marginTop: spacing.md },
-  // Footer pagination & button styling
-  footer: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xl,
-    backgroundColor: colors.surface,
+  optionTitle: {
+    ...typography.bodyBold,
+    color: colors.textOnDark,
+    marginBottom: 2,
   },
-  dotsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-    gap: spacing.xs,
+  optionTitleActive: {
+    color: colors.amber,
   },
-  dot: {
-    height: 8,
-    borderRadius: 4,
+  optionDesc: {
+    ...typography.caption,
+    color: colors.textMutedDark,
   },
-  dotActive: {
-    width: 24,
-    backgroundColor: colors.amber,
+  optionDescActive: {
+    color: colors.textOnDark,
   },
-  dotInactive: {
-    width: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.15)',
-  },
-  btnWrapper: {
-    width: '100%',
-  },
-  // Modal languages selection styling
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'flex-end',
   },
-  modalContent: {
-    width: '85%',
-    height: '60%',
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    padding: spacing.xl,
+  modalSheet: {
+    backgroundColor: '#0F121F', // Match theme navy surface
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    maxHeight: '75%',
+    paddingBottom: spacing.xxl,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    padding: spacing.xl,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingBottom: spacing.md,
-    marginBottom: spacing.md,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
   modalTitle: {
-    ...typography.h3,
-    color: colors.text,
+    ...typography.h2,
+    color: colors.textOnDark,
   },
-  modalClose: {
-    fontSize: 20,
-    color: colors.textMuted,
-    padding: spacing.xs,
+  closeModalText: {
+    color: colors.textMutedDark,
+    fontSize: 18,
+    fontWeight: 'bold',
   },
-  modalScroll: { flex: 1 },
+  langList: {
+    paddingHorizontal: spacing.xl,
+    marginTop: spacing.md,
+  },
   langItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(0, 0, 0, 0.06)',
+    paddingVertical: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.04)',
   },
   langItemActive: {
-    backgroundColor: 'rgba(255, 191, 0, 0.08)',
+    borderBottomColor: colors.amber,
   },
   langText: {
     ...typography.body,
-    color: colors.text,
+    color: colors.textOnDark,
   },
   langTextActive: {
-    fontWeight: '700',
     color: colors.amber,
+    fontWeight: 'bold',
   },
-  langCheck: {
+  checkIcon: {
     color: colors.amber,
-    fontWeight: '800',
     fontSize: 16,
+    fontWeight: 'bold',
   },
-  bulletsContainer: {
-    width: '100%',
-    marginTop: spacing.md,
-    gap: spacing.md,
-  },
-  bulletRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.03)',
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
-    width: '100%',
-  },
-  bulletEmoji: {
-    fontSize: 20,
-    marginRight: spacing.md,
-  },
-  bulletText: {
-    ...typography.bodyBold,
-    color: colors.text,
-    fontSize: 13,
-    flex: 1,
-    lineHeight: 18,
-  }
 });

@@ -20,14 +20,18 @@ export type RootStackParamList = {
   Splash: undefined;
   Signup: undefined;
   Login: undefined;
-  ForgotPasswordScreen: undefined;
-  VerifyOtp: { email: string }; 
+  MpinLogin: { phone?: string; isUnlock?: boolean } | undefined;
+  SetMpin: undefined;
+  ResetMpin: { email: string; mode?: 'change' | 'forgot' };
+  ForgotPasswordScreen: { mode?: 'password' | 'mpin' } | undefined;
+  VerifyOtp: { email: string; mode?: 'password' | 'mpin' }; 
   ResetPassword: { email: string };
   Onboarding: undefined;
+  Auth: undefined;
   MainTabs: NavigatorScreenParams<MainTabsParamList>;
   Lesson: { lessonId: string };
   JargonBuster: { term: string };
-  Quiz: undefined;
+  Quiz: { lessonId?: string } | undefined;
   StockDetail: { symbol: string };
   BuySell: { symbol: string; action: 'BUY' | 'SELL'; mode?: 'buy' | 'sell' };
   TradeSuccess: {
@@ -39,4 +43,5 @@ export type RootStackParamList = {
     mode?: 'buy' | 'sell';
   };
   Community: undefined;
+  SymbolSearch: undefined;
 };

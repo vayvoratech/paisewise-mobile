@@ -1,6 +1,6 @@
-/** Screen 07 — Daily Quiz. XP at stake, timer, option states, explanation. */
+/** Screen 07 — Daily Quiz & Lesson Quiz. XP at stake, auto-timer, randomized choices, score + XP awards. */
 import React, { useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { HeroBackground } from '../../../shared/ui/HeroBackground';
@@ -11,38 +11,63 @@ import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { DAILY_QUIZ } from '../quiz.data';
 import { Analytics } from '../../../core/analyticsService';
+import { apiClient } from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Quiz'>;
 
-export default function QuizScreen({ navigation }: Props) {
+export default function QuizScreen({ navigation, route }: Props) {
+  const lessonId = route.params?.lessonId || 'mf-1';
+  const [questions, setQuestions] = useState<any[]>(DAILY_QUIZ);
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
-  const q = DAILY_QUIZ[index];
-  const [secondsLeft, setSecondsLeft] = useState(q.seconds);
+  const [score, setScore] = useState(0);
+  const [userAnswers, setUserAnswers] = useState<string[]>([]);
+  const [isFinished, setIsFinished] = useState(false);
+  const [xpEarned, setXpEarned] = useState(0);
+
+  // Load and shuffle questions for this lesson
+  useEffect(() => {
+    apiClient.get(`${API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '')}/learn/lessons/${lessonId}/quiz`)
+      .then(res => {
+        if (res.data && res.data.length > 0) {
+          const raw = res.data;
+          // Shuffle questions
+          const shuffled = [...raw].sort(() => Math.random() - 0.5).map((q: any) => {
+            let opts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
+            // Shuffle choices per question
+            opts = [...opts].sort(() => Math.random() - 0.5);
+            return { ...q, options: opts };
+          });
+          setQuestions(shuffled);
+        }
+      })
+      .catch(() => {
+        // Shuffle DAILY_QUIZ fallback
+        const shuffled = [...DAILY_QUIZ].sort(() => Math.random() - 0.5).map((q: any) => {
+          const opts = [...q.options].sort(() => Math.random() - 0.5);
+          return { ...q, options: opts };
+        });
+        setQuestions(shuffled);
+      });
+  }, [lessonId]);
+
+  const q = questions[index] || questions[0];
+  const [secondsLeft, setSecondsLeft] = useState(q.seconds || 20);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Track quiz_started when screen loads
+  // Timer countdown with auto-advance on 0
   useEffect(() => {
-    try {
-      (Analytics.quizStarted as any)({
-        sessionId: 'sess_abc123',
-        lessonId: 'daily_quiz_01',
-        attemptNumber: 1,
-        totalQuestions: DAILY_QUIZ.length,
-        language: 'en',
-      });
-    } catch (e) {
-      // Fallback safeguard
-    }
-  }, []);
-
-  useEffect(() => {
-    setSecondsLeft(q.seconds);
+    setSecondsLeft(q.seconds || 20);
     setPicked(null);
     timerRef.current = setInterval(() => {
-      setSecondsLeft((s) => {
+      setSecondsLeft((s: number) => {
         if (s <= 1) {
           if (timerRef.current) clearInterval(timerRef.current);
+          // Auto advance on timeout
+          setTimeout(() => {
+            handleTimeoutNext();
+          }, 800);
           return 0;
         }
         return s - 1;
@@ -53,45 +78,75 @@ export default function QuizScreen({ navigation }: Props) {
     };
   }, [index, q.seconds]);
 
+  const handleTimeoutNext = () => {
+    if (picked === null) {
+      setUserAnswers(prev => [...prev, 'TIMEOUT']);
+    }
+    if (index < questions.length - 1) {
+      setIndex(i => i + 1);
+    } else {
+      finishQuiz(score);
+    }
+  };
+
   const answered = picked !== null;
+
   const onPick = (key: string) => {
     if (answered) return;
     setPicked(key);
     if (timerRef.current) clearInterval(timerRef.current);
 
-    const isCorrect = q.options.find((opt) => opt.key === key)?.correct ?? false;
-
-    // Track quiz_question_answered safely
-    try {
-      (Analytics.quizQuestionAnswered as any)({
-        sessionId: 'sess_abc123',
-        lessonId: 'daily_quiz_01',
-        questionIndex: index + 1,
-        selectedOption: key,
-        isCorrect: isCorrect,
-        timeSpentSeconds: q.seconds - secondsLeft,
-      });
-    } catch (e) {}
+    const isCorrect = q.options.find((opt: any) => opt.key === key)?.correct ?? false;
+    if (isCorrect) {
+      setScore(s => s + 1);
+    }
+    setUserAnswers(prev => [...prev, key]);
   };
 
   const next = () => {
-    if (index < DAILY_QUIZ.length - 1) {
+    if (index < questions.length - 1) {
       setIndex((i) => i + 1);
     } else {
-      // Track quiz_completed safely
-      try {
-        (Analytics.quizCompleted as any)({
-          sessionId: 'sess_abc123',
-          lessonId: 'daily_quiz_01',
-          correctCount: DAILY_QUIZ.length,
-          wrongCount: 0,
-          xpEarned: 50,
-          timeSpentSeconds: 120,
-        });
-      } catch (e) {}
-      navigation.goBack();
+      finishQuiz(score);
     }
   };
+
+  const finishQuiz = async (finalScore: number) => {
+    setIsFinished(true);
+    const earned = Math.round((finalScore / questions.length) * 50);
+    setXpEarned(earned);
+
+    try {
+      await apiClient.post(`${API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '')}/learn/lessons/${lessonId}/quiz/submit`, {
+        answers: userAnswers,
+        xpReward: 50
+      });
+    } catch (e) {
+      // Fallback local update
+    }
+  };
+
+  if (isFinished) {
+    return (
+      <HeroBackground tone="dark">
+        <SafeAreaView style={styles.safe}>
+          <View style={styles.resultContainer}>
+            <Text style={{ fontSize: 60, textAlign: 'center' }}>🎉</Text>
+            <Text style={styles.resultTitle}>Quiz Completed!</Text>
+            <Text style={styles.resultScore}>Score: {score} / {questions.length}</Text>
+            <Pill label={`⭐ +${xpEarned} XP Earned!`} color={colors.amber} bg="rgba(245,158,11,0.2)" mono />
+
+            <Button 
+              label="Continue Learning  →" 
+              variant="gradientPurple" 
+              style={{ marginTop: spacing.xl, width: '100%' }} 
+              onPress={() => navigation.goBack()} 
+            />
+          </View>
+        </SafeAreaView>
+      </HeroBackground>
+    );
+  }
 
   return (
     <HeroBackground tone="dark">
@@ -99,19 +154,19 @@ export default function QuizScreen({ navigation }: Props) {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {/* Status row */}
           <View style={styles.statusRow}>
-            <Pill label={`⭐ ${q.xp} XP at stake`} color={colors.amber} bg="rgba(245,158,11,0.12)" borderColor="rgba(245,158,11,0.4)" mono />
-            <Pill label={`⏱ ${secondsLeft} sec`} color={colors.pink} bg="rgba(244,63,94,0.12)" borderColor="rgba(244,63,94,0.4)" mono />
+            <Pill label={`⭐ ${q.xp || 50} XP at stake`} color={colors.amber} bg="rgba(245,158,11,0.12)" borderColor="rgba(245,158,11,0.4)" mono />
+            <Pill label={`⏱ ${secondsLeft} sec`} color={secondsLeft < 5 ? colors.pink : colors.amber} bg="rgba(244,63,94,0.12)" borderColor="rgba(244,63,94,0.4)" mono />
           </View>
 
           <View style={{ marginTop: spacing.lg }}>
-            <ProgressBar progress={(index + (answered ? 1 : 0)) / DAILY_QUIZ.length} color={colors.amber} />
+            <ProgressBar progress={(index + (answered ? 1 : 0)) / questions.length} color={colors.amber} />
           </View>
 
-          <Text style={styles.qCount}>QUESTION {index + 1} OF {DAILY_QUIZ.length}</Text>
+          <Text style={styles.qCount}>QUESTION {index + 1} OF {questions.length}</Text>
           <Text style={styles.prompt}>{q.prompt}</Text>
 
           <View style={styles.options}>
-            {q.options.map((opt) => {
+            {(q.options || []).map((opt: any) => {
               const isPicked = picked === opt.key;
               const showCorrect = answered && opt.correct;
               const showWrong = answered && isPicked && !opt.correct;
@@ -133,15 +188,19 @@ export default function QuizScreen({ navigation }: Props) {
 
           {answered && (
             <View style={styles.explain}>
-              <Text style={styles.explainIcon}>✅</Text>
-              <Text style={styles.explainText}>{q.explanation}</Text>
+              <Text style={styles.explainIcon}>💡</Text>
+              <Text style={styles.explainText}>{q.explanation || 'Great effort answering this question!'}</Text>
             </View>
           )}
         </ScrollView>
 
         {answered && (
           <View style={styles.footer}>
-            <Button label="Next Question  →" variant="gradientAmber" onPress={next} />
+            <Button 
+              label={index === questions.length - 1 ? "Submit Quiz  ✓" : "Next Question  →"} 
+              variant={index === questions.length - 1 ? "gradientPurple" : "gradientAmber"} 
+              onPress={next} 
+            />
           </View>
         )}
       </SafeAreaView>
@@ -168,4 +227,7 @@ const styles = StyleSheet.create({
   explainIcon: { fontSize: 22 },
   explainText: { ...typography.body, color: colors.textMutedDark, flex: 1, lineHeight: 24, fontSize: 16 },
   footer: { paddingVertical: spacing.md },
+  resultContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.lg, paddingHorizontal: spacing.xl },
+  resultTitle: { ...typography.h1, color: colors.textOnDark, fontSize: 32 },
+  resultScore: { ...typography.bodyBold, color: colors.textMutedDark, fontSize: 22 },
 });
