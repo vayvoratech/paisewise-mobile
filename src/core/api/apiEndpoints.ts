@@ -14,6 +14,12 @@ const getDevIp = () => {
 
 const DEV_IP = getDevIp();
 
+export const BASE_URL_LIST = [
+  `http://${DEV_IP}:8080`,
+  'http://192.168.29.179:8080',
+  'https://paisewise-backend.onrender.com'
+];
+
 export const BASE_URL = `http://${DEV_IP}:8080`;
 
 export const API_ENDPOINTS = {
