@@ -7,7 +7,11 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ActivityIndicator,
+  Modal,
+  TextInput,
 } from 'react-native';
+import { watchlistManager, PriceAlertItem } from '../../watchlist/watchlistManager';
+import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
 
 // Expanded mock data mapping for watchlist & popular stocks
 const MOCK_STOCK_DATABASE: Record<string, { name: string; price: string; change: string; pe: string; cap: string; yield: string; high: string; chart: { x: string; y: number }[] }> = {
@@ -101,19 +105,19 @@ const MOCK_STOCK_DATABASE: Record<string, { name: string; price: string; change:
       { x: '15:00', y: 3801 },
     ],
   },
-  NIFTY: {
-    name: 'NIFTY 50 Index',
-    price: '$22,456.00',
-    change: '+$112.50 (+0.5%) Today',
-    pe: '22.8',
-    cap: 'N/A',
-    yield: '1.20%',
-    high: '22,750.00',
+  INFY: {
+    name: 'Infosys Limited',
+    price: '$1,456.00',
+    change: '+$2.10 (+0.15%) Today',
+    pe: '25.6',
+    cap: '6.05L Cr',
+    yield: '2.10%',
+    high: '1,620.00',
     chart: [
-      { x: '9:30', y: 22350 },
-      { x: '11:00', y: 22400 },
-      { x: '13:00', y: 22430 },
-      { x: '15:00', y: 22456 },
+      { x: '9:30', y: 1450 },
+      { x: '11:00', y: 1452 },
+      { x: '13:00', y: 1455 },
+      { x: '15:00', y: 1456 },
     ],
   },
 };
@@ -123,9 +127,78 @@ export default function StockDetailScreen({ route, navigation }: { route: any; n
   const [selectedInterval, setSelectedInterval] = useState('1D');
   const [activeJargon, setActiveJargon] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const marketClosed = true;
 
-  // Retrieve or dynamically generate fallback stock info so any symbol works seamlessly
+  // Watchlist state & confirm modal
+  const [isWatchlisted, setIsWatchlisted] = useState(false);
+  const [watchConfirmVisible, setWatchConfirmVisible] = useState(false);
+
+  // Alert modal state & alerts list
+  const [alertModalVisible, setAlertModalVisible] = useState(false);
+  const [targetPriceInput, setTargetPriceInput] = useState('');
+  const [alertCondition, setAlertCondition] = useState<'GT' | 'LT'>('GT');
+  const [alertError, setAlertError] = useState<string | null>(null);
+  const [alertSuccess, setAlertSuccess] = useState<string | null>(null);
+  const [existingAlerts, setExistingAlerts] = useState<PriceAlertItem[]>([]);
+
+  // Sync watchlist & alerts on mount & manager changes
+  useEffect(() => {
+    const updateStates = () => {
+      setIsWatchlisted(watchlistManager.isInWatchlist(symbol));
+      setExistingAlerts(watchlistManager.getAlertsForSymbol(symbol));
+    };
+
+    updateStates();
+
+    watchlistManager.on('change', updateStates);
+    watchlistManager.on('alerts_change', updateStates);
+
+    return () => {
+      watchlistManager.off('change', updateStates);
+      watchlistManager.off('alerts_change', updateStates);
+    };
+  }, [symbol]);
+
+  const handleStarPress = () => {
+    setWatchConfirmVisible(true);
+  };
+
+  const handleConfirmWatchlistToggle = () => {
+    if (isWatchlisted) {
+      watchlistManager.removeFromWatchlist(symbol);
+    } else {
+      const stockName = companyName || MOCK_STOCK_DATABASE[symbol]?.name || `${symbol} Corp.`;
+      watchlistManager.addToWatchlist(symbol, stockName);
+    }
+    setWatchConfirmVisible(false);
+  };
+
+  const handleCreateAlert = () => {
+    setAlertError(null);
+    const targetPrice = parseFloat(targetPriceInput);
+
+    if (isNaN(targetPrice) || targetPrice <= 0) {
+      setAlertError('Please enter a valid positive target price.');
+      return;
+    }
+
+    if (watchlistManager.isDuplicateAlert(symbol, targetPrice, alertCondition)) {
+      setAlertError(`⚠️ Duplicate: Alert already exists for ${symbol} at ₹${targetPrice} (${alertCondition})`);
+      return;
+    }
+
+    watchlistManager.addAlert(symbol, targetPrice, alertCondition);
+    setAlertSuccess(`Alert set for ${symbol} when price is ${alertCondition === 'GT' ? 'above' : 'below'} ₹${targetPrice}`);
+    setTargetPriceInput('');
+    setTimeout(() => {
+      setAlertSuccess(null);
+    }, 2000);
+  };
+
+  const handleDeleteAlert = (alertId: string) => {
+    watchlistManager.deleteAlert(alertId);
+  };
+
+  const marketClosed = true;
   const baseStockInfo = MOCK_STOCK_DATABASE[symbol];
   const stockInfo = {
     name: companyName || baseStockInfo?.name || `${symbol} Corporation`,
@@ -145,13 +218,20 @@ export default function StockDetailScreen({ route, navigation }: { route: any; n
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Production Navigation Header */}
+      {/* Navigation Header */}
       <View style={styles.navHeader}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.navTitle}>{symbol}</Text>
-        <View style={styles.spacerView} />
+        <View style={styles.headerRightActions}>
+          <TouchableOpacity style={styles.iconActionBtn} onPress={() => setAlertModalVisible(true)}>
+            <Text style={styles.actionEmojiIcon}>🔔</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.iconActionBtn, isWatchlisted && styles.starBtnActive]} onPress={handleStarPress}>
+            <Text style={styles.actionEmojiIcon}>{isWatchlisted ? '⭐' : '☆'}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {marketClosed && (
@@ -231,7 +311,109 @@ export default function StockDetailScreen({ route, navigation }: { route: any; n
         </ScrollView>
       )}
 
-      {/* Footer Action Buttons with explicit mode parameters */}
+      {/* Confirmation Modal for Watchlist Add/Remove */}
+      <ConfirmModal
+        visible={watchConfirmVisible}
+        title={isWatchlisted ? 'Remove from Watchlist' : 'Add to Watchlist'}
+        message={
+          isWatchlisted
+            ? `Are you sure you want to remove ${symbol} from your Watchlist?`
+            : `Are you sure you want to add ${symbol} to your Watchlist?`
+        }
+        confirmText={isWatchlisted ? 'Yes, Remove' : 'Yes, Add'}
+        confirmVariant={isWatchlisted ? 'danger' : 'primary'}
+        onConfirm={handleConfirmWatchlistToggle}
+        onCancel={() => setWatchConfirmVisible(false)}
+      />
+
+      {/* Price Alert Manager Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={alertModalVisible}
+        onRequestClose={() => setAlertModalVisible(false)}
+      >
+        <View style={styles.alertModalOverlay}>
+          <View style={styles.alertModalSheet}>
+            <View style={styles.alertModalHeader}>
+              <Text style={styles.alertModalTitle}>🔔 Price Alerts for {symbol}</Text>
+              <TouchableOpacity onPress={() => setAlertModalVisible(false)}>
+                <Text style={styles.closeModalText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {alertSuccess && (
+              <View style={styles.alertSuccessBox}>
+                <Text style={styles.alertSuccessText}>✓ {alertSuccess}</Text>
+              </View>
+            )}
+
+            {alertError && (
+              <View style={styles.alertErrorBox}>
+                <Text style={styles.alertErrorText}>{alertError}</Text>
+              </View>
+            )}
+
+            <View style={styles.alertForm}>
+              <Text style={styles.alertLabel}>Create New Alert</Text>
+              <TextInput
+                style={styles.alertInput}
+                placeholder="Enter target price e.g. 3050"
+                keyboardType="numeric"
+                value={targetPriceInput}
+                onChangeText={setTargetPriceInput}
+              />
+
+              <View style={styles.conditionRow}>
+                {(['GT', 'LT'] as const).map((cond) => (
+                  <TouchableOpacity
+                    key={cond}
+                    style={[styles.condBtn, alertCondition === cond && styles.condBtnActive]}
+                    onPress={() => setAlertCondition(cond)}
+                  >
+                    <Text style={[styles.condBtnText, alertCondition === cond && styles.condBtnTextActive]}>
+                      {cond === 'GT' ? '📈 Above (>)' : '📉 Below (<)'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TouchableOpacity style={styles.createAlertSubmitBtn} onPress={handleCreateAlert}>
+                <Text style={styles.createAlertSubmitText}>Save Price Alert 🔔</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* List of Existing Active Alerts for this Symbol */}
+            <View style={styles.existingAlertsSection}>
+              <Text style={styles.existingAlertsTitle}>
+                Active Alerts ({existingAlerts.length})
+              </Text>
+              {existingAlerts.length === 0 ? (
+                <Text style={styles.noAlertsText}>No active price alerts set for {symbol}.</Text>
+              ) : (
+                existingAlerts.map((alt) => (
+                  <View key={alt.id} style={styles.alertCardRow}>
+                    <View style={styles.alertCardInfo}>
+                      <Text style={styles.alertCardCondition}>
+                        Target: {alt.condition === 'GT' ? 'Above' : 'Below'} ₹{alt.targetPrice.toFixed(2)}
+                      </Text>
+                      <Text style={styles.alertCardStatus}>Status: {alt.status}</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.deleteAlertBtn}
+                      onPress={() => handleDeleteAlert(alt.id)}
+                    >
+                      <Text style={styles.deleteAlertBtnText}>🗑️</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Footer Action Buttons */}
       <View style={styles.footerAction}>
         <TouchableOpacity 
           style={[styles.actionBtn, styles.sellBtn]} 
@@ -256,7 +438,10 @@ const styles = StyleSheet.create({
   backBtn: { paddingVertical: 4 },
   backBtnText: { fontSize: 16, fontWeight: '600', color: '#4F46E5' },
   navTitle: { fontSize: 16, fontWeight: '700', color: '#111' },
-  spacerView: { width: 50 },
+  headerRightActions: { flexDirection: 'row', gap: 12 },
+  iconActionBtn: { padding: 8, borderRadius: 20, backgroundColor: '#F3F4F6' },
+  starBtnActive: { backgroundColor: '#FEF3C7' },
+  actionEmojiIcon: { fontSize: 18 },
   banner: { backgroundColor: '#FEF3C7', paddingVertical: 8, alignItems: 'center' },
   bannerText: { fontSize: 12, fontWeight: '600', color: '#92400E' },
   loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -286,6 +471,34 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 16, fontWeight: '700', color: '#1F2937' },
   jargonBox: { marginTop: 12, backgroundColor: '#EEF2FF', padding: 12, borderRadius: 8 },
   jargonText: { fontSize: 13, color: '#3730A3', lineHeight: 18 },
+  alertModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  alertModalSheet: { backgroundColor: '#FFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 40, maxHeight: '85%' },
+  alertModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  alertModalTitle: { fontSize: 18, fontWeight: '700', color: '#111' },
+  closeModalText: { fontSize: 18, fontWeight: '700', color: '#666' },
+  alertForm: { gap: 10, marginBottom: 16 },
+  alertLabel: { fontSize: 13, fontWeight: '700', color: '#374151' },
+  alertInput: { borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, padding: 12, fontSize: 16 },
+  conditionRow: { flexDirection: 'row', gap: 12 },
+  condBtn: { flex: 1, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB', alignItems: 'center' },
+  condBtnActive: { borderColor: '#4F46E5', backgroundColor: '#EEF2FF' },
+  condBtnText: { fontSize: 13, fontWeight: '600', color: '#4B5563' },
+  condBtnTextActive: { color: '#4F46E5' },
+  createAlertSubmitBtn: { backgroundColor: '#4F46E5', padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 6 },
+  createAlertSubmitText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
+  alertSuccessBox: { padding: 12, backgroundColor: '#D1FAE5', borderRadius: 8, marginBottom: 12 },
+  alertSuccessText: { color: '#065F46', fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  alertErrorBox: { padding: 12, backgroundColor: '#FEE2E2', borderRadius: 8, marginBottom: 12 },
+  alertErrorText: { color: '#B91C1C', fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  existingAlertsSection: { borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 12 },
+  existingAlertsTitle: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 8 },
+  noAlertsText: { fontSize: 13, color: '#9CA3AF', fontStyle: 'italic' },
+  alertCardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, backgroundColor: '#F9FAFB', borderRadius: 8, marginBottom: 8, borderWidth: 1, borderColor: '#F3F4F6' },
+  alertCardInfo: { gap: 2 },
+  alertCardCondition: { fontSize: 14, fontWeight: '600', color: '#1F2937' },
+  alertCardStatus: { fontSize: 11, fontWeight: '500', color: '#10B981' },
+  deleteAlertBtn: { padding: 6 },
+  deleteAlertBtnText: { fontSize: 14 },
   footerAction: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', padding: 16, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#E5E7EB', gap: 12 },
   actionBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
   sellBtn: { backgroundColor: '#FEE2E2' },

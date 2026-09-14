@@ -1,5 +1,5 @@
 /** Screen 03 — Home Dashboard. Greeting, stats, today's lesson, market, quick actions. */
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CompositeScreenProps } from '@react-navigation/native';
@@ -35,18 +35,32 @@ const QUICK_ACTIONS = [
   { emoji: '💼', label: 'Portfolio', go: 'Portfolio' },
 ];
 
+import { useWebSocket } from '../../../hooks/useWebSocket';
+import { IndexQuote } from '../../market/market.types';
+import { watchlistManager } from '../../watchlist/watchlistManager';
+
 export default function HomeScreen({ navigation }: Props) {
   const holdingsValue = useSelector((state: RootState) => state.portfolio.holdingsValue);
   const user = useSelector((state: RootState) => state.auth.user);
+  const connectionStatus = useSelector((state: RootState) => state.market?.connectionStatus || 'DISCONNECTED');
   const [refreshing, setRefreshing] = useState(false);
 
   const [isMarketOpen, setIsMarketOpen] = useState(false);
   const [gainers, setGainers] = useState<Stock[]>([]);
   const [losers, setLosers] = useState<Stock[]>([]);
+  const [indices, setIndices] = useState<IndexQuote[]>([]);
 
   const [profileData, setProfileData] = useState<{ name?: string; dayStreak?: number; xpTotal?: number; level?: number } | null>(null);
   const [streakData, setStreakData] = useState<{ currentStreak?: number; maxStreak?: number } | null>(null);
   const [progressData, setProgressData] = useState<{ progressPercent?: number } | null>(null);
+
+  // Initialize WebSocket stream for watchlist symbols (memoized for performance)
+  const watchlistSymbols = useMemo(() => {
+    const list = watchlistManager.getWatchlist();
+    return list.length > 0 ? list.map(item => `NSE:${item.symbol}`) : ['NSE:RELIANCE', 'NSE:TCS', 'NSE:INFY'];
+  }, []);
+
+  useWebSocket(watchlistSymbols);
 
   const fetchHomeData = useCallback(() => {
     marketService.getMarketStatus().then((res) => {
@@ -58,6 +72,11 @@ export default function HomeScreen({ navigation }: Props) {
       if (res) {
         setGainers(res.gainers.slice(0, 3));
         setLosers(res.losers.slice(0, 3));
+      }
+    });
+    marketService.getMarketIndices().then((res) => {
+      if (Array.isArray(res) && res.length > 0) {
+        setIndices(res);
       }
     });
 
@@ -97,6 +116,11 @@ export default function HomeScreen({ navigation }: Props) {
   const level = profileData?.level ?? 1;
   const progressPct = progressData?.progressPercent ?? 0;
 
+  const nifty = indices.find(i => i.symbol.includes('NIFTY')) || { symbol: 'NIFTY 50', value: 24320.50, changePct: 0.45 };
+  const sensex = indices.find(i => i.symbol.includes('SENSEX')) || { symbol: 'SENSEX', value: 79850.30, changePct: 0.52 };
+  const niftyVal = (nifty as any).value ?? (nifty as any).price ?? 24320.50;
+  const sensexVal = (sensex as any).value ?? (sensex as any).price ?? 79850.30;
+
   return (
     <View style={styles.root}>
       {/* SafeAreaView applied at the root container level to push content below notch */}
@@ -113,12 +137,19 @@ export default function HomeScreen({ navigation }: Props) {
                   </View>
                 </View>
               </View>
-              <TouchableOpacity style={styles.bell} activeOpacity={0.7}>
-                <Text style={styles.bellEmoji}>🔔</Text>
-                <View style={styles.bellBadge}>
-                  <Text style={styles.bellBadgeText}>2</Text>
-                </View>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Pill
+                  label={connectionStatus === 'CONNECTED' ? "🟢 WS LIVE" : connectionStatus === 'CONNECTING' ? "🟡 WS CONNECTING" : "🔴 WS OFFLINE"}
+                  color={connectionStatus === 'CONNECTED' ? colors.green : connectionStatus === 'CONNECTING' ? colors.orange : colors.pink}
+                  bg={connectionStatus === 'CONNECTED' ? colors.greenSoft : connectionStatus === 'CONNECTING' ? 'rgba(245, 158, 11, 0.15)' : colors.redSoft}
+                />
+                <TouchableOpacity style={styles.bell} activeOpacity={0.7}>
+                  <Text style={styles.bellEmoji}>🔔</Text>
+                  <View style={styles.bellBadge}>
+                    <Text style={styles.bellBadgeText}>2</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Dynamic Search Bar Trigger */}
@@ -134,15 +165,19 @@ export default function HomeScreen({ navigation }: Props) {
             {/* Nifty/Sensex Indices Strip */}
             <View style={styles.indicesStrip}>
               <View style={styles.indexBox}>
-                <Text style={styles.indexName}>NIFTY 50</Text>
-                <Text style={styles.indexVal}>24,320.50</Text>
-                <Text style={[styles.indexPct, { color: colors.green }]}>↑ +0.45%</Text>
+                <Text style={styles.indexName}>{nifty.symbol}</Text>
+                <Text style={styles.indexVal}>{formatINR(niftyVal)}</Text>
+                <Text style={[styles.indexPct, { color: nifty.changePct >= 0 ? colors.green : colors.pink }]}>
+                  {nifty.changePct >= 0 ? '↑' : '↓'} {nifty.changePct >= 0 ? '+' : ''}{nifty.changePct.toFixed(2)}%
+                </Text>
               </View>
               <View style={styles.indexDivider} />
               <View style={styles.indexBox}>
-                <Text style={styles.indexName}>SENSEX</Text>
-                <Text style={styles.indexVal}>79,850.30</Text>
-                <Text style={[styles.indexPct, { color: colors.green }]}>↑ +0.52%</Text>
+                <Text style={styles.indexName}>{sensex.symbol}</Text>
+                <Text style={styles.indexVal}>{formatINR(sensexVal)}</Text>
+                <Text style={[styles.indexPct, { color: sensex.changePct >= 0 ? colors.green : colors.pink }]}>
+                  {sensex.changePct >= 0 ? '↑' : '↓'} {sensex.changePct >= 0 ? '+' : ''}{sensex.changePct.toFixed(2)}%
+                </Text>
               </View>
             </View>
 
@@ -197,11 +232,18 @@ export default function HomeScreen({ navigation }: Props) {
         {/* Market Now */}
         <View style={[styles.sectionHead, { marginTop: spacing.xl }]}>
           <Text style={styles.sectionTitle}>Market Now</Text>
-          <Pill
-            label={isMarketOpen ? "● LIVE" : "● CLOSED"}
-            color={isMarketOpen ? colors.green : colors.pink}
-            bg={isMarketOpen ? colors.greenSoft : colors.redSoft}
-          />
+          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+            <Pill
+              label={connectionStatus === 'CONNECTED' ? "🟢 WS LIVE" : connectionStatus === 'CONNECTING' ? "🟡 WS CONNECTING" : "🔴 WS OFFLINE"}
+              color={connectionStatus === 'CONNECTED' ? colors.green : connectionStatus === 'CONNECTING' ? colors.orange : colors.pink}
+              bg={connectionStatus === 'CONNECTED' ? colors.greenSoft : connectionStatus === 'CONNECTING' ? 'rgba(245, 158, 11, 0.15)' : colors.redSoft}
+            />
+            <Pill
+              label={isMarketOpen ? "● LIVE" : "● CLOSED"}
+              color={isMarketOpen ? colors.green : colors.pink}
+              bg={isMarketOpen ? colors.greenSoft : colors.redSoft}
+            />
+          </View>
         </View>
 
         <Text style={{ ...typography.overline, color: colors.textMuted, marginBottom: spacing.sm }}>

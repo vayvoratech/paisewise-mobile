@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios';
 import { tokenStorage } from './tokenStorage';
+import { BASE_URL } from './apiEndpoints';
 
 // Extend config type to track retry attempts
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
@@ -7,7 +8,7 @@ interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
 }
 
 export const apiClient: AxiosInstance = axios.create({
-  baseURL: process.env.EXPO_PUBLIC_API_BASE_URL || 'https://api.example.com',
+  baseURL: process.env.EXPO_PUBLIC_API_BASE_URL || BASE_URL,
   timeout: 15000, // 15s timeout
   headers: {
     'Content-Type': 'application/json',

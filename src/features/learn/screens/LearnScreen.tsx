@@ -10,63 +10,103 @@ import { ProgressBar } from '../../../shared/ui/ProgressBar';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { MainTabsParamList, RootStackParamList } from '../../../app/navigation/types';
 import { Analytics } from '../../../core/analyticsService';
-import { apiClient } from '../../../core/api/apiClient';
-import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
+import { learnApi } from '../learnApi';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabsParamList, 'Learn'>,
   NativeStackScreenProps<RootStackParamList>
 >;
 
-const CHAPTER_LESSONS = [
-  { no: 1, title: 'Money Basics', emoji: '💵', lessons: [
-    { id: 'mf-1', title: 'Basics of Money & Wealth', order: 1 },
-    { id: 'mf-2', title: 'Understanding Inflation & Savings', order: 2 },
-    { id: 'mf-3', title: 'Introduction to Financial Planning', order: 3 },
-    { id: 'mf-4', title: 'Setting Smart Financial Goals', order: 4 },
-    { id: 'mf-5', title: 'Emergency Funds 101', order: 5 }
-  ]},
-  { no: 2, title: 'Stocks 101', emoji: '📈', lessons: [
-    { id: 'st-1', title: 'What is a Stock?', order: 1 },
-    { id: 'st-2', title: 'How Stock Exchanges Work', order: 2 },
-    { id: 'st-3', title: 'Understanding Bull vs Bear Markets', order: 3 },
-    { id: 'st-4', title: 'Dividends & Stock Returns', order: 4 },
-    { id: 'st-5', title: 'Analyzing Company Basics', order: 5 }
-  ]},
-  { no: 3, title: 'Mutual Funds', emoji: '📊', lessons: [
-    { id: 'mf-3', title: 'What exactly is a Mutual Fund?', order: 1 },
-    { id: 'mf-6', title: 'SIP vs Lumpsum Investments', order: 2 },
-    { id: 'mf-7', title: 'Equity vs Debt Funds', order: 3 },
-    { id: 'mf-8', title: 'Expense Ratio Explained', order: 4 },
-    { id: 'mf-9', title: 'Choosing the Right Mutual Fund', order: 5 }
-  ]},
-  { no: 4, title: 'Risk & Returns', emoji: '⚖️', lessons: [
-    { id: 'rk-1', title: 'Understanding Risk Profiles', order: 1 },
-    { id: 'rk-2', title: 'Diversification Strategy', order: 2 },
-    { id: 'rk-3', title: 'Asset Allocation Principles', order: 3 },
-    { id: 'rk-4', title: 'Managing Market Volatility', order: 4 },
-    { id: 'rk-5', title: 'Long-term Wealth Creation', order: 5 }
-  ]}
+const DEFAULT_LESSONS = [
+  // Chapter 1: Financial Basics
+  { id: 'mf-1', title: 'Introduction to Money & Savings', chapter: 'Financial Basics', chapterNo: 1, index: 1, total: 6, quizXp: 50 },
+  { id: 'mf-2', title: 'What is the Stock Market?', chapter: 'Financial Basics', chapterNo: 1, index: 2, total: 6, quizXp: 50 },
+  { id: 'mf-3', title: 'Understanding Inflation & Purchasing Power', chapter: 'Financial Basics', chapterNo: 1, index: 3, total: 6, quizXp: 50 },
+  { id: 'mf-4', title: 'The Magic of Compound Interest', chapter: 'Financial Basics', chapterNo: 1, index: 4, total: 6, quizXp: 50 },
+  { id: 'mf-5', title: 'Needs vs Wants: The 50/30/20 Rule', chapter: 'Financial Basics', chapterNo: 1, index: 5, total: 6, quizXp: 50 },
+  { id: 'mf-6', title: 'Emergency Funds & Financial Safety', chapter: 'Financial Basics', chapterNo: 1, index: 6, total: 6, quizXp: 50 },
+
+  // Chapter 2: Mutual Funds & NAV
+  { id: 'mf-7', title: 'What is a Mutual Fund?', chapter: 'Mutual Funds & NAV', chapterNo: 2, index: 1, total: 6, quizXp: 50 },
+  { id: 'mf-8', title: 'Understanding NAV (Net Asset Value)', chapter: 'Mutual Funds & NAV', chapterNo: 2, index: 2, total: 6, quizXp: 50 },
+  { id: 'mf-9', title: 'Active vs Passive Mutual Funds', chapter: 'Mutual Funds & NAV', chapterNo: 2, index: 3, total: 6, quizXp: 50 },
+  { id: 'mf-10', title: 'Index Funds & Nifty 50 Investing', chapter: 'Mutual Funds & NAV', chapterNo: 2, index: 4, total: 6, quizXp: 50 },
+  { id: 'mf-11', title: 'Large Cap, Mid Cap & Small Cap Funds', chapter: 'Mutual Funds & NAV', chapterNo: 2, index: 5, total: 6, quizXp: 50 },
+  { id: 'mf-12', title: 'Sectoral & Thematic Mutual Funds', chapter: 'Mutual Funds & NAV', chapterNo: 2, index: 6, total: 6, quizXp: 50 },
+
+  // Chapter 3: Investing Strategies & SIPs
+  { id: 'mf-13', title: 'SIP vs Lumpsum Investment', chapter: 'Investing Strategies & SIPs', chapterNo: 3, index: 1, total: 6, quizXp: 50 },
+  { id: 'mf-14', title: 'Step-Up SIP: Scaling Your Wealth', chapter: 'Investing Strategies & SIPs', chapterNo: 3, index: 2, total: 6, quizXp: 50 },
+  { id: 'mf-15', title: 'Rupee Cost Averaging Explained', chapter: 'Investing Strategies & SIPs', chapterNo: 3, index: 3, total: 6, quizXp: 50 },
+  { id: 'mf-16', title: 'Goal-Based Investing', chapter: 'Investing Strategies & SIPs', chapterNo: 3, index: 4, total: 6, quizXp: 50 },
+  { id: 'mf-17', title: 'Market Timing vs Time in Market', chapter: 'Investing Strategies & SIPs', chapterNo: 3, index: 5, total: 6, quizXp: 50 },
+  { id: 'mf-18', title: 'Systematic Withdrawal Plans (SWP)', chapter: 'Investing Strategies & SIPs', chapterNo: 3, index: 6, total: 6, quizXp: 50 },
+
+  // Chapter 4: Asset Allocation & Risk Management
+  { id: 'mf-19', title: 'Equity vs Debt Funds', chapter: 'Asset Allocation & Risk Management', chapterNo: 4, index: 1, total: 6, quizXp: 50 },
+  { id: 'mf-20', title: 'Risk & Return Trade-off', chapter: 'Asset Allocation & Risk Management', chapterNo: 4, index: 2, total: 6, quizXp: 50 },
+  { id: 'mf-21', title: 'Expense Ratio & Exit Load', chapter: 'Asset Allocation & Risk Management', chapterNo: 4, index: 3, total: 6, quizXp: 50 },
+  { id: 'mf-22', title: 'Understanding CAGR & XIRR', chapter: 'Asset Allocation & Risk Management', chapterNo: 4, index: 4, total: 6, quizXp: 50 },
+  { id: 'mf-23', title: 'Managing Volatility & Market Crashes', chapter: 'Asset Allocation & Risk Management', chapterNo: 4, index: 5, total: 6, quizXp: 50 },
+  { id: 'mf-24', title: 'Diversification: Don\'t Put All Eggs in One Basket', chapter: 'Asset Allocation & Risk Management', chapterNo: 4, index: 6, total: 6, quizXp: 50 },
+
+  // Chapter 5: Taxation & Portfolio Construction
+  { id: 'mf-25', title: 'Tax Implications of Equity & Debt Funds', chapter: 'Taxation & Portfolio Construction', chapterNo: 5, index: 1, total: 6, quizXp: 50 },
+  { id: 'mf-26', title: 'ELSS: Saving Income Tax Under 80C', chapter: 'Taxation & Portfolio Construction', chapterNo: 5, index: 2, total: 6, quizXp: 50 },
+  { id: 'mf-27', title: 'Short-Term vs Long-Term Capital Gains', chapter: 'Taxation & Portfolio Construction', chapterNo: 5, index: 3, total: 6, quizXp: 50 },
+  { id: 'mf-28', title: 'Rebalancing Your Investment Portfolio', chapter: 'Taxation & Portfolio Construction', chapterNo: 5, index: 4, total: 6, quizXp: 50 },
+  { id: 'mf-29', title: 'Common Behavioral Pitfalls of Investors', chapter: 'Taxation & Portfolio Construction', chapterNo: 5, index: 5, total: 6, quizXp: 50 },
+  { id: 'mf-30', title: 'Building Your First Wealth Portfolio', chapter: 'Taxation & Portfolio Construction', chapterNo: 5, index: 6, total: 6, quizXp: 50 },
 ];
 
 export default function LearnScreen({ navigation }: Props) {
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([]);
+  const [dbLessons, setDbLessons] = useState<any[]>(DEFAULT_LESSONS);
+  const [expandedChapters, setExpandedChapters] = useState<{ [key: number]: boolean }>({
+    1: true,
+    2: true,
+    3: true,
+    4: true,
+    5: true,
+  });
 
-  const fetchUserProgress = useCallback(() => {
-    apiClient.get(`${API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '')}/learn/progress`)
-      .then(res => {
-        if (res.data && typeof res.data.progressPercent === 'number') {
-          setProgressPercent(res.data.progressPercent);
+  const toggleChapterExpand = (chapterNo: number) => {
+    setExpandedChapters((prev) => ({
+      ...prev,
+      [chapterNo]: !prev[chapterNo],
+    }));
+  };
+
+  const fetchLearningData = useCallback(() => {
+    // 1. Fetch lessons from PostgreSQL DB via learnApi
+    learnApi.getLessons()
+      .then(lessons => {
+        if (Array.isArray(lessons) && lessons.length > 0) {
+          setDbLessons(lessons);
         }
       })
-      .catch(err => console.log('Progress fetch note:', err.message));
+      .catch(err => console.log('Lessons fetch note:', err.message));
+
+    // 2. Fetch user lesson completion progress from PostgreSQL DB via learnApi
+    learnApi.getUserProgress()
+      .then(progress => {
+        if (progress) {
+          if (typeof progress.progressPercent === 'number') {
+            setProgressPercent(progress.progressPercent);
+          }
+          if (Array.isArray(progress.completedLessonIds)) {
+            setCompletedLessonIds(progress.completedLessonIds);
+          }
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      fetchUserProgress();
-    }, [fetchUserProgress])
+      fetchLearningData();
+    }, [fetchLearningData])
   );
 
   const handleLessonPress = (lessonId: string, lessonTitle: string, chapterNo: number, isLocked: boolean) => {
@@ -90,8 +130,46 @@ export default function LearnScreen({ navigation }: Props) {
     navigation.navigate('Lesson', { lessonId });
   };
 
-  const totalLessonsCount = 20;
-  const completedCount = Math.floor((progressPercent / 100) * totalLessonsCount);
+  // Group lessons dynamically strictly by chapterNo to avoid duplicate chapter cards
+  const chapterEmojis: { [key: number]: string } = {
+    1: '💵',
+    2: '📊',
+    3: '📈',
+    4: '⚖️',
+    5: '🏛️'
+  };
+
+  const validLessons = dbLessons.filter(l => l.id && !l.id.startsWith('les_'));
+
+  const chapterMap: { [key: number]: { no: number; title: string; emoji: string; lessons: any[] } } = {};
+  validLessons.forEach((l) => {
+    const chapNo = l.chapterNo || 1;
+    const chapTitle = (l.chapter && !l.chapter.startsWith('Chapter ')) ? l.chapter : null;
+
+    if (!chapterMap[chapNo]) {
+      chapterMap[chapNo] = {
+        no: chapNo,
+        title: chapTitle || (chapNo === 1 ? 'Financial Basics' : chapNo === 2 ? 'Mutual Funds & NAV' : chapNo === 3 ? 'Investing Strategies & SIPs' : chapNo === 4 ? 'Asset Allocation & Risk Management' : 'Taxation & Portfolio Construction'),
+        emoji: chapterEmojis[chapNo] || '📚',
+        lessons: []
+      };
+    } else if (chapTitle && chapterMap[chapNo].title.startsWith('Chapter')) {
+      chapterMap[chapNo].title = chapTitle;
+    }
+    chapterMap[chapNo].lessons.push(l);
+  });
+
+  const chapters = Object.values(chapterMap).sort((a, b) => a.no - b.no);
+
+  // Flatten all lessons in order to calculate unlock statuses
+  const allOrderedLessons: any[] = [];
+  chapters.forEach(c => {
+    c.lessons.sort((a, b) => (a.index || 0) - (b.index || 0));
+    allOrderedLessons.push(...c.lessons);
+  });
+
+  const firstLessonId = allOrderedLessons.length > 0 ? allOrderedLessons[0].id : 'mf-1';
+  const continueLesson = allOrderedLessons.find(l => !completedLessonIds.includes(l.id)) || allOrderedLessons[0];
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
@@ -103,15 +181,15 @@ export default function LearnScreen({ navigation }: Props) {
           <Text style={styles.sectionTitle}>Continue Learning</Text>
           <Card 
             style={styles.continueCard} 
-            onPress={() => handleLessonPress('mf-1', 'Basics of Money & Wealth', 1, false)}
+            onPress={() => handleLessonPress(continueLesson?.id || firstLessonId, continueLesson?.title || 'Basics of Money', continueLesson?.chapterNo || 1, false)}
           >
             <View style={styles.continueRow}>
-              <View style={styles.continueIcon}><Text style={{ fontSize: 24 }}>💵</Text></View>
+              <View style={styles.continueIcon}><Text style={{ fontSize: 24 }}>{chapterEmojis[continueLesson?.chapterNo || 1] || '💵'}</Text></View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.continueChapter}>CHAPTER 1 · MONEY BASICS</Text>
-                <Text style={styles.continueTitle}>Basics of Money & Wealth</Text>
+                <Text style={styles.continueChapter}>CHAPTER {continueLesson?.chapterNo || 1} · {(continueLesson?.chapter || 'MONEY BASICS').toUpperCase()}</Text>
+                <Text style={styles.continueTitle}>{continueLesson?.title || 'Basics of Money & Wealth'}</Text>
               </View>
-              <Pill label="NEW" color={colors.purple} bg={colors.indigoChip} />
+              <Pill label={completedLessonIds.includes(continueLesson?.id) ? "✓ COMPLETED" : "IN PROGRESS"} color={colors.purple} bg={colors.indigoChip} />
             </View>
             <View style={{ marginTop: spacing.md }}>
               <ProgressBar progress={progressPercent / 100} color={colors.amber} trackColor={colors.border} />
@@ -120,51 +198,59 @@ export default function LearnScreen({ navigation }: Props) {
 
           <Text style={[styles.sectionTitle, { marginTop: spacing.xl }]}>All Chapters & Lessons</Text>
 
-          {CHAPTER_LESSONS.map((chap, cIdx) => {
-            const chapterStart = cIdx * 5;
-            const doneInChapter = Math.max(0, Math.min(5, completedCount - chapterStart));
+          {chapters.map((chap) => {
+            const completedInChap = chap.lessons.filter(l => completedLessonIds.includes(l.id)).length;
+            const isExpanded = expandedChapters[chap.no] !== false;
 
             return (
               <View key={chap.no} style={styles.chapterGroup}>
-                <View style={styles.chapterHeaderRow}>
+                <TouchableOpacity 
+                  activeOpacity={0.8}
+                  style={styles.chapterHeaderRow} 
+                  onPress={() => toggleChapterExpand(chap.no)}
+                >
                   <Text style={{ fontSize: 22 }}>{chap.emoji}</Text>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.chapterTitle}>Chapter {chap.no}: {chap.title}</Text>
-                    <Text style={styles.chapterMeta}>{doneInChapter}/5 lessons complete</Text>
+                    <Text style={styles.chapterMeta}>{completedInChap}/{chap.lessons.length} lessons complete</Text>
                   </View>
-                </View>
+                  <Text style={styles.chevronIcon}>{isExpanded ? '▲' : '▼'}</Text>
+                </TouchableOpacity>
                 <View style={{ marginTop: spacing.xs, marginBottom: spacing.md }}>
-                  <ProgressBar progress={doneInChapter / 5} color={doneInChapter === 5 ? colors.green : colors.amber} trackColor={colors.border} />
+                  <ProgressBar progress={chap.lessons.length > 0 ? completedInChap / chap.lessons.length : 0} color={completedInChap === chap.lessons.length ? colors.green : colors.amber} trackColor={colors.border} />
                 </View>
 
-                {/* Sub-lessons */}
-                <View style={styles.lessonList}>
-                  {chap.lessons.map((les, lIdx) => {
-                    const globalLessonIndex = chapterStart + lIdx;
-                    // First lesson is always unlocked; subsequent lessons require previous lesson completed
-                    const isLocked = globalLessonIndex > completedCount;
-                    const isDone = globalLessonIndex < completedCount;
+                {/* Sub-lessons collapsible accordion */}
+                {isExpanded && (
+                  <View style={styles.lessonList}>
+                    {chap.lessons.map((les, lIdx) => {
+                      const globalIdx = allOrderedLessons.findIndex(x => x.id === les.id);
+                      const isDone = completedLessonIds.includes(les.id);
+                      // Unlocked if first lesson, or completed, or previous lesson in global order is completed
+                      const isUnlocked = globalIdx === 0 || isDone || (globalIdx > 0 && completedLessonIds.includes(allOrderedLessons[globalIdx - 1]?.id));
+                      const isLocked = !isUnlocked;
 
-                    return (
-                      <TouchableOpacity
-                        key={les.id}
-                        activeOpacity={0.8}
-                        style={[styles.lessonItemCard, isLocked && styles.lessonItemLocked]}
-                        onPress={() => handleLessonPress(les.id, les.title, chap.no, isLocked)}
-                      >
-                        <View style={styles.lessonItemLeft}>
-                          <Text style={styles.lessonItemNum}>{chap.no}.{lIdx + 1}</Text>
-                          <Text style={[styles.lessonItemTitle, isLocked && styles.textMuted]}>{les.title}</Text>
-                        </View>
-                        <Pill 
-                          label={isDone ? "✓ Done" : isLocked ? "🔒 Locked" : "Start →"} 
-                          color={isDone ? colors.green : isLocked ? colors.textMuted : colors.purple} 
-                          bg={isDone ? "rgba(34,197,94,0.1)" : isLocked ? colors.surfaceMuted : colors.indigoChip} 
-                        />
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                      return (
+                        <TouchableOpacity
+                          key={les.id}
+                          activeOpacity={0.8}
+                          style={[styles.lessonItemCard, isLocked && styles.lessonItemLocked]}
+                          onPress={() => handleLessonPress(les.id, les.title, chap.no, isLocked)}
+                        >
+                          <View style={styles.lessonItemLeft}>
+                            <Text style={styles.lessonItemNum}>{chap.no}.{lIdx + 1}</Text>
+                            <Text style={[styles.lessonItemTitle, isLocked && styles.textMuted]}>{les.title}</Text>
+                          </View>
+                          <Pill 
+                            label={isDone ? "✓ Done" : isLocked ? "🔒 Locked" : "Start →"} 
+                            color={isDone ? colors.green : isLocked ? colors.textMuted : colors.purple} 
+                            bg={isDone ? "rgba(34,197,94,0.1)" : isLocked ? colors.surfaceMuted : colors.indigoChip} 
+                          />
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
               </View>
             );
           })}
@@ -188,6 +274,7 @@ const styles = StyleSheet.create({
   chapterHeaderRow: { flexDirection: 'row', gap: spacing.md, alignItems: 'center' },
   chapterTitle: { ...typography.h3, color: colors.text },
   chapterMeta: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
+  chevronIcon: { fontSize: 14, color: colors.textMuted, paddingHorizontal: spacing.xs },
   lessonList: { gap: spacing.sm, marginTop: spacing.sm },
   lessonItemCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
   lessonItemLocked: { opacity: 0.6, backgroundColor: colors.surfaceMuted },
