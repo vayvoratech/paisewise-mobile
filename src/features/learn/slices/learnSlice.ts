@@ -1,50 +1,64 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import axios from 'axios';
-import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
-import { Lesson } from '../learn.data';
+import { learnApi, Lesson } from '../learnApi';
 
 interface LearnState {
   lessons: Lesson[];
-  progress: number; // overall percentage progress
+  currentLesson: Lesson | null;
+  completedLessonIds: string[];
+  progressPercent: number;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: LearnState = {
   lessons: [],
-  progress: 0,
+  currentLesson: null,
+  completedLessonIds: [],
+  progressPercent: 0,
   loading: false,
   error: null,
 };
 
-export const fetchLessons = createAsyncThunk(
+export const fetchLessonsThunk = createAsyncThunk(
   'learn/fetchLessons',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(API_ENDPOINTS.LEARNING.LESSONS);
-      return response.data; // Array of lessons
+      return await learnApi.getLessons();
     } catch (err: any) {
-      const errMsg = err.response?.data?.message || err.message || 'Failed to fetch lessons';
-      return rejectWithValue(errMsg);
+      return rejectWithValue(err.message || 'Failed to fetch lessons');
     }
   }
 );
 
-export const updateLearningProgress = createAsyncThunk(
-  'learn/updateProgress',
-  async (lessonId: string, { getState, rejectWithValue }) => {
+export const fetchLessonThunk = createAsyncThunk(
+  'learn/fetchLesson',
+  async (lessonId: string, { rejectWithValue }) => {
     try {
-      const state: any = getState();
-      const token = state.auth.accessToken;
-      const response = await axios.post(
-        API_ENDPOINTS.LEARNING.PROGRESS,
-        { lessonId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      return response.data; // Updated progress percent or value
+      return await learnApi.getLesson(lessonId);
     } catch (err: any) {
-      const errMsg = err.response?.data?.message || err.message || 'Failed to update progress';
-      return rejectWithValue(errMsg);
+      return rejectWithValue(err.message || 'Failed to fetch lesson detail');
+    }
+  }
+);
+
+export const completeLessonThunk = createAsyncThunk(
+  'learn/completeLesson',
+  async (lessonId: string, { rejectWithValue }) => {
+    try {
+      return await learnApi.completeLesson(lessonId);
+    } catch (err: any) {
+      return rejectWithValue(err.message || 'Failed to complete lesson');
+    }
+  }
+);
+
+export const submitQuizThunk = createAsyncThunk(
+  'learn/submitQuiz',
+  async (payload: { lessonId: string; answers: string[]; timeSpent: number }, { rejectWithValue }) => {
+    try {
+      return await learnApi.submitQuiz(payload.lessonId, payload.answers, payload.timeSpent);
+    } catch (err: any) {
+      return rejectWithValue(err.message || 'Failed to submit quiz');
     }
   }
 );
@@ -53,38 +67,61 @@ const learnSlice = createSlice({
   name: 'learn',
   initialState,
   reducers: {
-    setLocalLessons(state, action: PayloadAction<Lesson[]>) {
+    setLessons(state, action: PayloadAction<Lesson[]>) {
       state.lessons = action.payload;
     },
-    incrementLocalProgress(state, action: PayloadAction<number>) {
-      state.progress = Math.min(100, state.progress + action.payload);
+    updateLessonProgress(state, action: PayloadAction<{ lessonId: string; progressPercent: number }>) {
+      if (!state.completedLessonIds.includes(action.payload.lessonId)) {
+        state.completedLessonIds.push(action.payload.lessonId);
+      }
+      state.progressPercent = action.payload.progressPercent;
+    },
+    setCurrentLesson(state, action: PayloadAction<Lesson | null>) {
+      state.currentLesson = action.payload;
     }
   },
   extraReducers: (builder) => {
     builder
-      // Fetch Lessons
-      .addCase(fetchLessons.pending, (state) => {
+      // fetchLessonsThunk
+      .addCase(fetchLessonsThunk.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchLessons.fulfilled, (state, action: PayloadAction<Lesson[]>) => {
+      .addCase(fetchLessonsThunk.fulfilled, (state, action: PayloadAction<Lesson[]>) => {
         state.loading = false;
         state.lessons = action.payload;
       })
-      .addCase(fetchLessons.rejected, (state, action) => {
+      .addCase(fetchLessonsThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
-      // Update Progress
-      .addCase(updateLearningProgress.fulfilled, (state, action: PayloadAction<any>) => {
-        if (typeof action.payload === 'number') {
-          state.progress = action.payload;
-        } else if (action.payload?.progressPercent !== undefined) {
-          state.progress = action.payload.progressPercent;
+      // fetchLessonThunk
+      .addCase(fetchLessonThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchLessonThunk.fulfilled, (state, action: PayloadAction<Lesson>) => {
+        state.loading = false;
+        state.currentLesson = action.payload;
+      })
+      .addCase(fetchLessonThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // completeLessonThunk
+      .addCase(completeLessonThunk.fulfilled, (state, action: PayloadAction<any>) => {
+        if (action.payload?.completedLessonId && !state.completedLessonIds.includes(action.payload.completedLessonId)) {
+          state.completedLessonIds.push(action.payload.completedLessonId);
+        }
+      })
+      // submitQuizThunk
+      .addCase(submitQuizThunk.fulfilled, (state, action: PayloadAction<any>) => {
+        if (action.payload?.lessonId && !state.completedLessonIds.includes(action.payload.lessonId)) {
+          state.completedLessonIds.push(action.payload.lessonId);
         }
       });
   },
 });
 
-export const { setLocalLessons, incrementLocalProgress } = learnSlice.actions;
+export const { setLessons, updateLessonProgress, setCurrentLesson } = learnSlice.actions;
 export default learnSlice.reducer;

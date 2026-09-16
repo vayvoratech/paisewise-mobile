@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   SafeAreaView,
 } from 'react-native';
+import { watchlistManager } from '../../watchlist/watchlistManager';
+import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
 
 const POPULAR_SYMBOLS = [
   { symbol: 'AAPL', name: 'Apple Inc.' },
@@ -22,6 +24,9 @@ const ALL_SYMBOLS = [
   { symbol: 'NFLX', name: 'Netflix Inc.' },
   { symbol: 'AMD', name: 'Advanced Micro Devices' },
   { symbol: 'INTC', name: 'Intel Corporation' },
+  { symbol: 'RELIANCE', name: 'Reliance Industries Ltd.' },
+  { symbol: 'TCS', name: 'Tata Consultancy Services' },
+  { symbol: 'INFY', name: 'Infosys Limited' },
 ];
 
 export default function SymbolSearchScreen({ navigation }: { navigation: any }) {
@@ -29,6 +34,26 @@ export default function SymbolSearchScreen({ navigation }: { navigation: any }) 
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [recentSearches, setRecentSearches] = useState<string[]>(['AAPL', 'TSLA']);
   const [searchResults, setSearchResults] = useState(ALL_SYMBOLS);
+
+  // Watchlist confirm modal state
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+  const [targetSymbol, setTargetSymbol] = useState<{ symbol: string; name: string } | null>(null);
+  const [isTargetInWatchlist, setIsTargetInWatchlist] = useState(false);
+  const [watchlistSymbols, setWatchlistSymbols] = useState<string[]>([]);
+
+  // Sync watchlist symbols on mount & changes
+  useEffect(() => {
+    const updateWatchlist = () => {
+      const items = watchlistManager.getWatchlist();
+      setWatchlistSymbols(items.map((i) => i.symbol.toUpperCase()));
+    };
+
+    updateWatchlist();
+    watchlistManager.on('change', updateWatchlist);
+    return () => {
+      watchlistManager.off('change', updateWatchlist);
+    };
+  }, []);
 
   // 300ms Debounce Setup
   useEffect(() => {
@@ -56,32 +81,37 @@ export default function SymbolSearchScreen({ navigation }: { navigation: any }) 
       setRecentSearches([symbol, ...recentSearches.slice(0, 4)]);
     }
     
-    // Find the full company name from ALL_SYMBOLS if not directly provided
     const selectedItem = ALL_SYMBOLS.find((item) => item.symbol === symbol);
     const companyName = name || selectedItem?.name || symbol;
 
-    // Pass both symbol and companyName to the StockDetail screen
     navigation.navigate('StockDetail', { 
       symbol: symbol, 
       companyName: companyName 
     });
   };
 
-  const handleAddToWatchlist = (e: any, symbol: string) => {
-    // Stop the event from bubbling up to the parent row container
+  const handleWatchBtnPress = (e: any, symbol: string, name: string) => {
     e.stopPropagation();
+    const inList = watchlistManager.isInWatchlist(symbol);
+    setTargetSymbol({ symbol, name });
+    setIsTargetInWatchlist(inList);
+    setConfirmModalVisible(true);
+  };
 
-    // Safely return to Watchlist screen or pop stack
-    if (navigation.canGoBack()) {
-      navigation.goBack();
+  const handleConfirmWatchlistAction = () => {
+    if (!targetSymbol) return;
+    if (isTargetInWatchlist) {
+      watchlistManager.removeFromWatchlist(targetSymbol.symbol);
     } else {
-      navigation.navigate('Watchlist');
+      watchlistManager.addToWatchlist(targetSymbol.symbol, targetSymbol.name);
     }
+    setConfirmModalVisible(false);
+    setTargetSymbol(null);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header row containing the back button and search bar */}
+      {/* Header row */}
       <View style={styles.headerRow}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -140,24 +170,44 @@ export default function SymbolSearchScreen({ navigation }: { navigation: any }) 
       <FlatList
         data={searchResults}
         keyExtractor={(item) => item.symbol}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.resultItem}
-            onPress={() => handleSelectSymbol(item.symbol, item.name)}
-          >
-            <View>
-              <Text style={styles.resultSymbol}>{item.symbol}</Text>
-              <Text style={styles.resultName}>{item.name}</Text>
-            </View>
-            <TouchableOpacity 
-              style={styles.addButton}
-              onPress={(e) => handleAddToWatchlist(e, item.symbol)}
+        renderItem={({ item }) => {
+          const isAdded = watchlistSymbols.includes(item.symbol.toUpperCase());
+          return (
+            <TouchableOpacity
+              style={styles.resultItem}
+              onPress={() => handleSelectSymbol(item.symbol, item.name)}
             >
-              <Text style={styles.addButtonText}>＋ Watch</Text>
+              <View>
+                <Text style={styles.resultSymbol}>{item.symbol}</Text>
+                <Text style={styles.resultName}>{item.name}</Text>
+              </View>
+              <TouchableOpacity 
+                style={[styles.addButton, isAdded && styles.addedButton]}
+                onPress={(e) => handleWatchBtnPress(e, item.symbol, item.name)}
+              >
+                <Text style={[styles.addButtonText, isAdded && styles.addedButtonText]}>
+                  {isAdded ? '✓ Added' : '＋ Watch'}
+                </Text>
+              </TouchableOpacity>
             </TouchableOpacity>
-          </TouchableOpacity>
-        )}
+          );
+        }}
         contentContainerStyle={styles.resultsList}
+      />
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        visible={confirmModalVisible}
+        title={isTargetInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
+        message={
+          isTargetInWatchlist
+            ? `Are you sure you want to remove ${targetSymbol?.symbol} from your Watchlist?`
+            : `Are you sure you want to add ${targetSymbol?.symbol} to your Watchlist?`
+        }
+        confirmText={isTargetInWatchlist ? 'Yes, Remove' : 'Yes, Add'}
+        confirmVariant={isTargetInWatchlist ? 'danger' : 'primary'}
+        onConfirm={handleConfirmWatchlistAction}
+        onCancel={() => setConfirmModalVisible(false)}
       />
     </SafeAreaView>
   );
@@ -184,4 +234,6 @@ const styles = StyleSheet.create({
   resultName: { fontSize: 13, color: '#666', marginTop: 2 },
   addButton: { backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   addButtonText: { fontSize: 12, fontWeight: '600', color: '#374151' },
+  addedButton: { backgroundColor: '#D1FAE5' },
+  addedButtonText: { color: '#059669', fontWeight: '700' },
 });

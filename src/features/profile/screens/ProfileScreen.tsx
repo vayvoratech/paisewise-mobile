@@ -16,20 +16,30 @@ export default function ProfileScreen() {
   const [reminders, setReminders] = useState(PROFILE.dailyReminders);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [profileData, setProfileData] = useState<{ name?: string; dayStreak?: number; xpTotal?: number; level?: number } | null>(null);
+  const [streakData, setStreakData] = useState<{ currentStreak?: number; maxStreak?: number } | null>(null);
   const dispatch = useDispatch();
   const navigation = useNavigation<any>();
   const user = useSelector((state: RootState) => state.auth.user);
 
   useFocusEffect(
     useCallback(() => {
-      apiClient.get(`${API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '')}/profile/me`)
+      const baseUrl = API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '');
+      apiClient.get(`${baseUrl}/profile/me`)
         .then(res => {
           if (res.data) {
             setProfileData(res.data);
           }
         })
         .catch(err => console.log('Profile fetch note:', err.message));
-    }, [])
+
+      apiClient.get(`${baseUrl}/learn/streak`)
+        .then(res => {
+          if (res.data) {
+            setStreakData(res.data);
+          }
+        })
+        .catch(err => console.log('Streak fetch note:', err.message));
+  }, [])
   );
 
   const performLogout = async () => {
@@ -91,7 +101,7 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
-              <Text style={styles.statVal}>🔥 {profileData?.dayStreak ?? user?.dayStreak ?? 0} Days</Text>
+              <Text style={styles.statVal}>🔥 {streakData?.currentStreak ?? profileData?.dayStreak ?? user?.dayStreak ?? 0} Days</Text>
               <Text style={styles.statLbl}>Current Streak</Text>
             </View>
             <View style={styles.statDivider} />
@@ -105,15 +115,24 @@ export default function ProfileScreen() {
         {/* Badges Section */}
         <View style={styles.sectionHead}>
           <Text style={styles.sectionTitle}>Badges Earned</Text>
-          <Text style={styles.seeAll}>SEE ALL →</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Badges')} activeOpacity={0.7}>
+            <Text style={styles.seeAll}>SEE ALL →</Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.badges}>
-          {BADGES.map((b) => (
-            <Card key={b.title} style={styles.badge}>
-              <Text style={styles.badgeEmoji}>{b.emoji}</Text>
-              <Text style={styles.badgeTitle}>{b.title}</Text>
-              <Text style={styles.badgeCat}>{b.category}</Text>
-            </Card>
+          {BADGES.slice(0, 3).map((b) => (
+            <TouchableOpacity 
+              key={b.title} 
+              style={{ flex: 1 }} 
+              activeOpacity={0.8} 
+              onPress={() => navigation.navigate('Badges')}
+            >
+              <Card style={styles.badge}>
+                <Text style={styles.badgeEmoji}>{b.emoji}</Text>
+                <Text style={styles.badgeTitle}>{b.title}</Text>
+                <Text style={styles.badgeCat}>{b.category}</Text>
+              </Card>
+            </TouchableOpacity>
           ))}
         </View>
 

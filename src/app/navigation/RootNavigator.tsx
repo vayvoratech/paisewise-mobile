@@ -21,6 +21,7 @@ import QuizScreen from '../../features/quiz/screens/QuizScreen';
 import BuySellScreen from '../../features/practice/screens/BuySellScreen';
 import TradeSuccessScreen from '../../features/practice/screens/TradeSuccessScreen';
 import CommunityScreen from '../../features/community/screens/CommunityScreen';
+import BadgesScreen from '../../features/profile/screens/BadgesScreen';
 
 // Import MPIN feature screens
 import MpinLoginScreen from '../../features/onboarding/screens/MpinLoginScreen';
@@ -90,12 +91,15 @@ function AppLockManager({ navigationRef }: { navigationRef: any }) {
   return null;
 }
 
+import { AlertToastBanner } from '../../shared/ui/AlertToastBanner';
+
 export default function RootNavigator() {
   const navigationRef = useNavigationContainerRef();
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
 
   return (
     <NavigationContainer ref={navigationRef}>
+      <AlertToastBanner />
       <AppLockManager navigationRef={navigationRef} />
       <Stack.Navigator 
         initialRouteName={isAuthenticated ? "MainTabs" : "Auth"} 
@@ -111,6 +115,7 @@ export default function RootNavigator() {
         <Stack.Screen name="Lesson" component={LessonScreen as any} />
         <Stack.Screen name="Quiz" component={QuizScreen as any} />
         <Stack.Screen name="Community" component={CommunityScreen} />
+        <Stack.Screen name="Badges" component={BadgesScreen as any} />
         
         {/* MPIN / Biometric screens at root level to support global overlay locking */}
         <Stack.Screen name="MpinLogin" component={MpinLoginScreen as any} />

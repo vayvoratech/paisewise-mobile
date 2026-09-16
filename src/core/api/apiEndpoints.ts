@@ -14,17 +14,27 @@ const getDevIp = () => {
 
 const DEV_IP = getDevIp();
 
+<<<<<<< HEAD
 export const BASE_URL = ['http://192.168.29.179:8080', "https://paisewise-backend.onrender.com"];
+=======
+export const BASE_URL_LIST = [
+  `http://${DEV_IP}:8080`,
+  'http://192.168.29.179:8080',
+  'https://paisewise-backend.onrender.com'
+];
+
+export const BASE_URL = `http://${DEV_IP}:8080`;
+>>>>>>> 6ed23e2b3d72e1e6df5518a5896f385d07d691dd
 
 export const API_ENDPOINTS = {
   AUTH: {
-    REGISTER: `${BASE_URL[0]}/auth/register`,
-    LOGIN: `${BASE_URL[0]}/auth/login`,
-    REFRESH_TOKEN: `${BASE_URL[0]}/auth/refresh-token`,
-    FORGOT_PASSWORD: `${BASE_URL[0]}/auth/forgot-password`,
-    VERIFY_OTP: `${BASE_URL[0]}/auth/verify-otp`,
-    RESET_PASSWORD: `${BASE_URL[0]}/auth/reset-password`,
-    LOGOUT: `${BASE_URL[0]}/auth/logout`,
+    REGISTER: `${BASE_URL}/auth/register`,
+    LOGIN: `${BASE_URL}/auth/login`,
+    REFRESH_TOKEN: `${BASE_URL}/auth/refresh-token`,
+    FORGOT_PASSWORD: `${BASE_URL}/auth/forgot-password`,
+    VERIFY_OTP: `${BASE_URL}/auth/verify-otp`,
+    RESET_PASSWORD: `${BASE_URL}/auth/reset-password`,
+    LOGOUT: `${BASE_URL}/auth/logout`,
   },
   LEARNING: {
     LESSONS: `${BASE_URL}/learning/lessons`,

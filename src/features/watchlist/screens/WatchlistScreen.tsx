@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,51 +6,64 @@ import {
   FlatList,
   TouchableOpacity,
   SafeAreaView,
+  Platform,
 } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-} from 'react-native-reanimated';
+import { watchlistManager, WatchlistItem } from '../watchlistManager';
+import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
 
-interface WatchlistItem {
-  id: string;
-  symbol: string;
-  name: string;
-  price: number;
-  change: number;
-  isPositive: boolean;
-}
-
-const INITIAL_WATCHLIST: WatchlistItem[] = [
-  { id: '1', symbol: 'AAPL', name: 'Apple Inc.', price: 189.42, change: 1.25, isPositive: true },
-  { id: '2', symbol: 'TSLA', name: 'Tesla Inc.', price: 219.80, change: -3.40, isPositive: false },
-  { id: '3', symbol: 'NVDA', name: 'NVIDIA Corp.', price: 878.36, change: 4.12, isPositive: true },
-  { id: '4', symbol: 'MSFT', name: 'Microsoft Corp.', price: 415.50, change: 0.85, isPositive: true },
-];
-
-/** 
- * 1. Standalone component outside of WatchlistScreen.
- * Hooks are called at the correct top level of a valid React component.
- */
-function WatchlistCard({ 
-  item, 
-  onPress 
-}: { 
-  item: WatchlistItem; 
-  onPress: () => void 
+function WatchlistCard({
+  item,
+  index,
+  onPress,
+  onDeletePress,
+  onMoveUp,
+  onMoveDown,
+  isFirst,
+  isLast,
+  onDragStart,
+  onDragOver,
+  onDrop,
+}: {
+  item: WatchlistItem;
+  index: number;
+  onPress: () => void;
+  onDeletePress: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  isFirst: boolean;
+  isLast: boolean;
+  onDragStart: (e: any, index: number) => void;
+  onDragOver: (e: any) => void;
+  onDrop: (e: any, index: number) => void;
 }) {
-  const translateX = useSharedValue(0);
+  const isWeb = Platform.OS === 'web';
 
-  const panStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-  }));
+  const webDragProps = isWeb
+    ? {
+        draggable: true,
+        onDragStart: (e: any) => onDragStart(e, index),
+        onDragOver: onDragOver,
+        onDrop: (e: any) => onDrop(e, index),
+      }
+    : {};
 
   return (
-    <View style={styles.rowContainer}>
-      <View style={styles.deleteBackground}>
-        <Text style={styles.deleteText}>Delete</Text>
-      </View>
-      <Animated.View style={[styles.card, panStyle]}>
+    <View style={styles.cardWrapper} {...(webDragProps as any)}>
+      <View style={styles.card}>
+        {/* Drag Handle & Arrow Controls */}
+        <View style={styles.dragHandleSection}>
+          <Text style={styles.dragGripIcon}>⋮⋮</Text>
+          <View style={styles.reorderControls}>
+            <TouchableOpacity disabled={isFirst} onPress={onMoveUp} style={[styles.arrowBtn, isFirst && styles.arrowDisabled]}>
+              <Text style={styles.arrowText}>▲</Text>
+            </TouchableOpacity>
+            <TouchableOpacity disabled={isLast} onPress={onMoveDown} style={[styles.arrowBtn, isLast && styles.arrowDisabled]}>
+              <Text style={styles.arrowText}>▼</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Card Content Body */}
         <TouchableOpacity
           style={styles.cardContent}
           onPress={onPress}
@@ -69,18 +82,88 @@ function WatchlistCard({
             </View>
           </View>
         </TouchableOpacity>
-      </Animated.View>
+
+        {/* Delete Action Button */}
+        <TouchableOpacity onPress={onDeletePress} style={styles.deleteBtn}>
+          <Text style={styles.deleteBtnIcon}>🗑️</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
-/** 2. Main Watchlist Screen Component */
 export default function WatchlistScreen({ navigation }: { navigation: any }) {
-  const [watchlist, setWatchlist] = useState<WatchlistItem[]>(INITIAL_WATCHLIST);
+  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [targetItemToDelete, setTargetItemToDelete] = useState<WatchlistItem | null>(null);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
-  const removeItem = useCallback((id: string) => {
-    setWatchlist((prev) => prev.filter((item) => item.id !== id));
+  useEffect(() => {
+    const updateWatchlist = () => {
+      setWatchlist(watchlistManager.getWatchlist());
+    };
+
+    updateWatchlist();
+    watchlistManager.on('change', updateWatchlist);
+    return () => {
+      watchlistManager.off('change', updateWatchlist);
+    };
   }, []);
+
+  const handleDeleteClick = (item: WatchlistItem) => {
+    setTargetItemToDelete(item);
+    setDeleteConfirmVisible(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (targetItemToDelete) {
+      watchlistManager.removeFromWatchlist(targetItemToDelete.symbol);
+    }
+    setDeleteConfirmVisible(false);
+    setTargetItemToDelete(null);
+  };
+
+  const moveItem = useCallback((index: number, direction: 'up' | 'down') => {
+    const updated = [...watchlist];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= updated.length) return;
+    const temp = updated[index];
+    updated[index] = updated[targetIndex];
+    updated[targetIndex] = temp;
+    watchlistManager.reorderWatchlist(updated);
+  }, [watchlist]);
+
+  // HTML5 Drag and Drop Handlers for Desktop Web Browsers
+  const handleDragStart = (e: any, index: number) => {
+    setDraggedIndex(index);
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', index.toString());
+    }
+  };
+
+  const handleDragOver = (e: any) => {
+    if (e.preventDefault) {
+      e.preventDefault();
+    }
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move';
+    }
+  };
+
+  const handleDrop = (e: any, dropIndex: number) => {
+    if (e.preventDefault) {
+      e.preventDefault();
+    }
+    if (draggedIndex !== null && draggedIndex !== dropIndex) {
+      const updated = [...watchlist];
+      const draggedItem = updated[draggedIndex];
+      updated.splice(draggedIndex, 1);
+      updated.splice(dropIndex, 0, draggedItem);
+      watchlistManager.reorderWatchlist(updated);
+    }
+    setDraggedIndex(null);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -97,10 +180,19 @@ export default function WatchlistScreen({ navigation }: { navigation: any }) {
       <FlatList
         data={watchlist}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <WatchlistCard 
-            item={item} 
-            onPress={() => navigation.navigate('StockDetail', { symbol: item.symbol })} 
+            item={item}
+            index={index}
+            onPress={() => navigation.navigate('StockDetail', { symbol: item.symbol, companyName: item.name })}
+            onDeletePress={() => handleDeleteClick(item)}
+            onMoveUp={() => moveItem(index, 'up')}
+            onMoveDown={() => moveItem(index, 'down')}
+            isFirst={index === 0}
+            isLast={index === watchlist.length - 1}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
           />
         )}
         contentContainerStyle={styles.listContainer}
@@ -111,6 +203,17 @@ export default function WatchlistScreen({ navigation }: { navigation: any }) {
             <Text style={styles.emptySubtitle}>Search and add symbols to track live prices effortlessly.</Text>
           </View>
         }
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        visible={deleteConfirmVisible}
+        title="Remove from Watchlist"
+        message={`Are you sure you want to remove ${targetItemToDelete?.symbol} from your Watchlist?`}
+        confirmText="Yes, Remove"
+        confirmVariant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteConfirmVisible(false)}
       />
     </SafeAreaView>
   );
@@ -123,17 +226,23 @@ const styles = StyleSheet.create({
   searchIconBtn: { padding: 8, backgroundColor: '#EDF2F7', borderRadius: 20 },
   searchIconSymbol: { fontSize: 16 },
   listContainer: { paddingHorizontal: 20, paddingBottom: 20 },
-  rowContainer: { marginVertical: 6, position: 'relative' },
-  deleteBackground: { position: 'absolute', right: 0, top: 0, bottom: 0, backgroundColor: '#EA4335', justifyContent: 'center', alignItems: 'flex-end', paddingRight: 24, borderRadius: 12, width: '100%' },
-  deleteText: { color: '#FFF', fontWeight: '600' },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 },
-  cardContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
+  cardWrapper: { marginVertical: 6 },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12 },
+  dragHandleSection: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingRight: 4 },
+  dragGripIcon: { fontSize: 16, color: '#9CA3AF', cursor: 'grab' as any },
+  reorderControls: { flexDirection: 'column', gap: 2 },
+  arrowBtn: { padding: 2 },
+  arrowDisabled: { opacity: 0.2 },
+  arrowText: { fontSize: 9, color: '#6B7280', fontWeight: '700' },
+  cardContent: { flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 8 },
   symbolText: { fontSize: 16, fontWeight: '700', color: '#1A1A1A' },
   nameText: { fontSize: 13, color: '#666', marginTop: 2, maxWidth: 160 },
   priceContainer: { alignItems: 'flex-end' },
   priceText: { fontSize: 16, fontWeight: '600', color: '#1A1A1A' },
   badge: { marginTop: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   badgeText: { fontSize: 12, fontWeight: '600' },
+  deleteBtn: { padding: 8, borderRadius: 20, backgroundColor: '#FEE2E2', marginLeft: 6 },
+  deleteBtnIcon: { fontSize: 14 },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', marginTop: 100, paddingHorizontal: 32 },
   emptyEmoji: { fontSize: 48, marginBottom: 12 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 6 },

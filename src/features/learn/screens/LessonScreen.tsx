@@ -12,8 +12,7 @@ import { RootStackParamList } from '../../../app/navigation/types';
 import { TODAYS_LESSON } from '../learn.data';
 import { JargonText } from '../components/JargonText';
 import { Analytics } from '../../../core/analyticsService';
-import { apiClient } from '../../../core/api/apiClient';
-import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
+import { learnApi } from '../learnApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Lesson'>;
 
@@ -23,16 +22,27 @@ export default function LessonScreen({ navigation, route }: Props) {
   const [isCompleted, setIsCompleted] = useState(false);
 
   useEffect(() => {
-    // Fetch dynamic lesson details from backend API
-    apiClient.get(`${API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '')}/learn/lessons/${selectedLessonId}`)
-      .then(res => {
-        if (res.data) {
-          setLessonData(res.data);
+    // Fetch dynamic lesson details from backend API via learnApi
+    learnApi.getLesson(selectedLessonId)
+      .then(lesson => {
+        if (lesson) {
+          setLessonData(lesson);
         }
       })
       .catch(() => {
         // Keep TODAYS_LESSON fallback if offline
       });
+
+    // Check if this lesson is already completed by user via learnApi
+    learnApi.getUserProgress()
+      .then(progress => {
+        if (progress && Array.isArray(progress.completedLessonIds)) {
+          if (progress.completedLessonIds.includes(selectedLessonId)) {
+            setIsCompleted(true);
+          }
+        }
+      })
+      .catch(() => {});
   }, [selectedLessonId]);
 
   const lesson = lessonData || TODAYS_LESSON;
@@ -67,11 +77,19 @@ export default function LessonScreen({ navigation, route }: Props) {
     navigation.navigate('JargonBuster', { term });
   };
 
+  const [isRead80Percent, setIsRead80Percent] = useState(false);
+
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
     const paddingToBottom = 20;
     const scrollProgress = (contentOffset.y + layoutMeasurement.height) / (contentSize.height - paddingToBottom);
     const percentage = Math.min(Math.max(scrollProgress * 100, 0), 100);
+
+    // Auto-mark completed at 80% read depth
+    if (percentage >= 80 && !isRead80Percent && !isCompleted) {
+      setIsRead80Percent(true);
+      handleCompleteLesson();
+    }
 
     ([25, 50, 75, 100] as const).forEach((milestone) => {
       if (percentage >= milestone && !milestonesFired.current[milestone]) {
@@ -89,7 +107,7 @@ export default function LessonScreen({ navigation, route }: Props) {
 
   const handleCompleteLesson = async () => {
     try {
-      await apiClient.post(`${API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '')}/learn/complete`, { lessonId: lesson.id });
+      await learnApi.completeLesson(lesson.id);
       setIsCompleted(true);
       Alert.alert(
         "🎉 Lesson Completed!",
@@ -116,6 +134,27 @@ export default function LessonScreen({ navigation, route }: Props) {
     navigation.navigate('Quiz', { lessonId: lesson.id });
   };
 
+  // Robust segment parsing to ensure no lesson is ever rendered blank
+  let segmentsList: any[] = [];
+  if (Array.isArray(lesson.segments)) {
+    segmentsList = lesson.segments;
+  } else if (typeof lesson.segments === 'string' && lesson.segments.trim().length > 0) {
+    try {
+      segmentsList = JSON.parse(lesson.segments);
+    } catch (e) {
+      segmentsList = [{ type: 'text', content: lesson.segments }];
+    }
+  }
+
+  if (!Array.isArray(segmentsList) || segmentsList.length === 0) {
+    segmentsList = [
+      { type: 'emoji', content: '💡' },
+      { type: 'text', content: `Welcome to ${lesson.title || 'this financial lesson'}!` },
+      { type: 'text', content: `In this module, you will learn essential concepts about ${lesson.title || 'personal finance, mutual funds, and wealth building'}.` },
+      { type: 'callout', title: 'KEY LESSON TAKEAWAY', content: 'Consistency in learning and regular SIP investing is the fastest path to long-term financial independence.' }
+    ];
+  }
+
   return (
     <View style={styles.root}>
       <ScrollView 
@@ -140,7 +179,7 @@ export default function LessonScreen({ navigation, route }: Props) {
 
         {/* Body */}
         <View style={styles.body}>
-          {(lesson.segments || []).map((seg: any, i: number) => {
+          {segmentsList.map((seg: any, i: number) => {
             if (seg.type === 'emoji') {
               return (
                 <Card key={i} style={styles.emojiCard}>
@@ -161,7 +200,7 @@ export default function LessonScreen({ navigation, route }: Props) {
             }
             return (
               <Card key={i} style={styles.textCard}>
-                <JargonText text={seg.content} jargonWords={lesson.jargonWords || []} baseStyle={styles.paragraph} onPressTerm={openJargon} />
+                <JargonText text={seg.content || ''} jargonWords={lesson.jargonWords || ['Money', 'Savings', 'Mutual Fund', 'Inflation', 'Stock Market', 'Shares', 'NAV', 'SIP']} onPressTerm={openJargon} />
               </Card>
             );
           })}

@@ -7,55 +7,103 @@ import { Button } from '../../../shared/ui/Button';
 import { Pill } from '../../../shared/ui/Pill';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
+import { learnApi } from '../learnApi';
 import { JARGON } from '../learn.data';
-import { Analytics } from '../../../core/analyticsService'; // Adjust path if needed
+import { Analytics } from '../../../core/analyticsService';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'JargonBuster'>;
 
 export default function JargonBusterScreen({ navigation, route }: Props) {
   const termKey = route.params.term;
-  const term = JARGON[termKey];
-  
+  const [termData, setTermData] = React.useState<any>(JARGON[termKey] || null);
+  const [loading, setLoading] = React.useState(true);
+
   // Track open time to calculate how long the sheet was open
   const openTimeRef = useRef(Date.now());
+
+  // In-memory cache for fast offline lookup
+  const jargonCacheRef = useRef<{ [key: string]: any }>({});
+
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+
+    const cacheKey = `jargon_${termKey.toLowerCase()}`;
+    if (jargonCacheRef.current[cacheKey]) {
+      setTermData(jargonCacheRef.current[cacheKey]);
+      setLoading(false);
+      return;
+    }
+
+    learnApi.getJargon(termKey)
+      .then(data => {
+        if (isMounted && data) {
+          jargonCacheRef.current[cacheKey] = data;
+          setTermData(data);
+        }
+      })
+      .catch(() => {
+        // Look up in static dictionary as fallback
+        const local = JARGON[termKey] || Object.values(JARGON).find((j: any) => j.term.toLowerCase() === termKey.toLowerCase());
+        if (isMounted && local) {
+          jargonCacheRef.current[cacheKey] = local;
+          setTermData(local);
+        }
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+  }, [termKey]);
+
+  const term = termData;
 
   useEffect(() => {
     if (term) {
       Analytics.jargonTermTapped({
-        sessionId: 'sess_abc123', // Replace with your active session ID variable/state
-        lessonId: 'lesson_current', // Pass actual active lesson ID if available in route/params
+        sessionId: 'sess_abc123',
+        lessonId: 'lesson_current',
         term: termKey,
-        termDisplay: term.term,
+        termDisplay: term.term || termKey,
         language: 'en',
         blockIndex: 0,
         tapCountInLesson: 1,
       });
     }
-  }, [termKey]);
+  }, [termKey, term]);
 
   const handleClose = (closeMethod: string) => {
     const timeOpenSeconds = Math.round((Date.now() - openTimeRef.current) / 1000);
 
     if (term) {
-    
       Analytics.jargonSheetClosed({
-        sessionId: 'sess_abc123', // Replace with active session ID
-        lessonId: 'lesson_current', // Pass actual lesson ID
+        sessionId: 'sess_abc123',
+        lessonId: 'lesson_current',
         term: termKey,
         timeOpenSeconds: timeOpenSeconds,
-        closeMethod: closeMethod, // e.g., 'button_tap' or 'background_dismiss'
+        closeMethod: closeMethod,
       });
     }
 
     navigation.goBack();
   };
 
+  if (loading && !term) {
+    return (
+      <View style={styles.root}>
+        <View style={styles.sheet}>
+          <Text style={styles.title}>Loading term...</Text>
+        </View>
+      </View>
+    );
+  }
+
   if (!term) {
     return (
       <View style={styles.root}>
         <View style={styles.sheet}>
-          <Text style={styles.title}>Term not found</Text>
-          <Button label="Got it! ✓ Back to lesson" variant="dark" onPress={() => navigation.goBack()} />
+          <Text style={styles.title}>Term "{termKey}"</Text>
+          <Text style={styles.definition}>A financial concept in trading and investing.</Text>
+          <Button label="Got it! ✓ Back to lesson" variant="dark" onPress={() => navigation.goBack()} style={{ marginTop: spacing.lg }} />
         </View>
       </View>
     );

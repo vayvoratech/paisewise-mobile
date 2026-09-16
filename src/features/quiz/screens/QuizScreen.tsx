@@ -11,8 +11,7 @@ import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { DAILY_QUIZ } from '../quiz.data';
 import { Analytics } from '../../../core/analyticsService';
-import { apiClient } from '../../../core/api/apiClient';
-import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
+import { learnApi } from '../../learn/learnApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Quiz'>;
 
@@ -26,18 +25,18 @@ export default function QuizScreen({ navigation, route }: Props) {
   const [isFinished, setIsFinished] = useState(false);
   const [xpEarned, setXpEarned] = useState(0);
 
-  // Load and shuffle questions for this lesson
+  // Load and shuffle questions for this lesson via learnApi
   useEffect(() => {
-    apiClient.get(`${API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '')}/learn/lessons/${lessonId}/quiz`)
-      .then(res => {
-        if (res.data && res.data.length > 0) {
-          const raw = res.data;
+    learnApi.getQuiz(lessonId)
+      .then(data => {
+        if (data && data.length > 0) {
+          const raw = data;
           // Shuffle questions
           const shuffled = [...raw].sort(() => Math.random() - 0.5).map((q: any) => {
-            let opts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
+            let opts = typeof q.options === 'string' ? JSON.parse(q.options) : (q.optionsJson ? (typeof q.optionsJson === 'string' ? JSON.parse(q.optionsJson) : q.optionsJson) : q.options);
             // Shuffle choices per question
             opts = [...opts].sort(() => Math.random() - 0.5);
-            return { ...q, options: opts };
+            return { ...q, options: opts, prompt: q.questionPrompt || q.prompt };
           });
           setQuestions(shuffled);
         }
@@ -52,19 +51,18 @@ export default function QuizScreen({ navigation, route }: Props) {
       });
   }, [lessonId]);
 
-  const q = questions[index] || questions[0];
-  const [secondsLeft, setSecondsLeft] = useState(q.seconds || 20);
+  const q = questions[index] || questions[0] || {};
+  const [secondsLeft, setSecondsLeft] = useState(q.seconds || 30);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Timer countdown with auto-advance on 0
+  // 30s Countdown timer per question
   useEffect(() => {
-    setSecondsLeft(q.seconds || 20);
+    setSecondsLeft(30);
     setPicked(null);
     timerRef.current = setInterval(() => {
       setSecondsLeft((s: number) => {
         if (s <= 1) {
           if (timerRef.current) clearInterval(timerRef.current);
-          // Auto advance on timeout
           setTimeout(() => {
             handleTimeoutNext();
           }, 800);
@@ -76,7 +74,7 @@ export default function QuizScreen({ navigation, route }: Props) {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [index, q.seconds]);
+  }, [index]);
 
   const handleTimeoutNext = () => {
     if (picked === null) {
@@ -96,9 +94,11 @@ export default function QuizScreen({ navigation, route }: Props) {
     setPicked(key);
     if (timerRef.current) clearInterval(timerRef.current);
 
-    const isCorrect = q.options.find((opt: any) => opt.key === key)?.correct ?? false;
+    const isCorrect = q.options?.find((opt: any) => opt.key === key)?.correct ?? false;
+    let newScore = score;
     if (isCorrect) {
-      setScore(s => s + 1);
+      newScore = score + 1;
+      setScore(newScore);
     }
     setUserAnswers(prev => [...prev, key]);
   };
@@ -113,35 +113,67 @@ export default function QuizScreen({ navigation, route }: Props) {
 
   const finishQuiz = async (finalScore: number) => {
     setIsFinished(true);
-    const earned = Math.round((finalScore / questions.length) * 50);
+    const scorePct = (finalScore / (questions.length || 1)) * 100;
+    const isPassed = scorePct >= 70;
+    const earned = isPassed ? 50 : 0;
     setXpEarned(earned);
 
-    try {
-      await apiClient.post(`${API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '')}/learn/lessons/${lessonId}/quiz/submit`, {
-        answers: userAnswers,
-        xpReward: 50
-      });
-    } catch (e) {
-      // Fallback local update
+    if (isPassed) {
+      try {
+        await learnApi.submitQuiz(lessonId, userAnswers, 30);
+      } catch (e) {
+        // Fallback local update
+      }
     }
   };
 
+  const restartQuiz = () => {
+    setIndex(0);
+    setScore(0);
+    setPicked(null);
+    setUserAnswers([]);
+    setIsFinished(false);
+  };
+
   if (isFinished) {
+    const scorePct = Math.round((score / (questions.length || 1)) * 100);
+    const isPassed = scorePct >= 70;
+
     return (
       <HeroBackground tone="dark">
         <SafeAreaView style={styles.safe}>
           <View style={styles.resultContainer}>
-            <Text style={{ fontSize: 60, textAlign: 'center' }}>🎉</Text>
-            <Text style={styles.resultTitle}>Quiz Completed!</Text>
-            <Text style={styles.resultScore}>Score: {score} / {questions.length}</Text>
-            <Pill label={`⭐ +${xpEarned} XP Earned!`} color={colors.amber} bg="rgba(245,158,11,0.2)" mono />
+            <Text style={{ fontSize: 60, textAlign: 'center' }}>{isPassed ? '🎉' : '❌'}</Text>
+            <Text style={styles.resultTitle}>{isPassed ? 'Quiz Passed!' : 'Quiz Failed'}</Text>
+            <Text style={styles.resultScore}>Score: {score} / {questions.length} ({scorePct}%)</Text>
 
-            <Button 
-              label="Continue Learning  →" 
-              variant="gradientPurple" 
-              style={{ marginTop: spacing.xl, width: '100%' }} 
-              onPress={() => navigation.goBack()} 
-            />
+            {isPassed ? (
+              <>
+                <Pill label={`⭐ +${xpEarned || 50} XP Earned!`} color={colors.amber} bg="rgba(245,158,11,0.2)" mono />
+                <Button 
+                  label="Continue Learning  →" 
+                  variant="gradientPurple" 
+                  style={{ marginTop: spacing.xl, width: '100%' }} 
+                  onPress={() => navigation.goBack()} 
+                />
+              </>
+            ) : (
+              <>
+                <Pill label="Need >= 70% score to pass" color={colors.pink} bg="rgba(244,63,94,0.2)" mono />
+                <Button 
+                  label="Retry Quiz  🔄" 
+                  variant="gradientAmber" 
+                  style={{ marginTop: spacing.xl, width: '100%' }} 
+                  onPress={restartQuiz} 
+                />
+                <Button 
+                  label="Back to Lessons" 
+                  variant="outline" 
+                  style={{ marginTop: spacing.md, width: '100%' }} 
+                  onPress={() => navigation.goBack()} 
+                />
+              </>
+            )}
           </View>
         </SafeAreaView>
       </HeroBackground>
@@ -163,7 +195,7 @@ export default function QuizScreen({ navigation, route }: Props) {
           </View>
 
           <Text style={styles.qCount}>QUESTION {index + 1} OF {questions.length}</Text>
-          <Text style={styles.prompt}>{q.prompt}</Text>
+          <Text style={styles.prompt}>{q.prompt || q.questionPrompt || 'Quiz Question'}</Text>
 
           <View style={styles.options}>
             {(q.options || []).map((opt: any) => {
