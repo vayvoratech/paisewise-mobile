@@ -73,8 +73,15 @@ export const learnApi = {
   },
 
   // GET /learn/jargon/:term - Fetch jargon definition from DB
-  getJargon: async (term: string): Promise<JargonTerm> => {
-    const response = await apiClient.get(`/learn/jargon/${term}`);
+  getJargon: async (term: string, language: string = 'en'): Promise<JargonTerm> => {
+    const encodedTerm = encodeURIComponent(term);
+    const response = await apiClient.get(`/learn/jargon/${encodedTerm}?language=${language}`);
+    return response.data;
+  },
+
+  // POST /learn/jargon/ai - Fetch dynamic AI jargon explanation
+  getAiJargon: async (term: string, language: string = 'en'): Promise<{ term: string; language: string; explanation: string }> => {
+    const response = await apiClient.post('/learn/jargon/ai', { term, language });
     return response.data;
   },
 

@@ -7,7 +7,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Card } from '../../../shared/ui/Card';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { BADGES, PROFILE } from '../profile.data';
-import { logoutUser } from '../../onboarding/slices/authSlice';
+import { logoutUser, setLanguage } from '../../onboarding/slices/authSlice';
 import { RootState } from '../../../app/store';
 import { apiClient } from '../../../core/api/apiClient';
 import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
@@ -21,6 +21,30 @@ export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const user = useSelector((state: RootState) => state.auth.user);
 
+  const [selectedLanguage, setSelectedLanguage] = useState(PROFILE.language || 'English');
+  const [showLangModal, setShowLangModal] = useState(false);
+
+  const WORKING_LANGUAGES = [
+    { code: 'en', name: 'English', native: 'English', flag: '🇬🇧' },
+    { code: 'te', name: 'Telugu', native: 'తెలుగు', flag: '🇮🇳' },
+    { code: 'hi', name: 'Hindi', native: 'हिन्दी', flag: '🇮🇳' },
+    { code: 'bn', name: 'Bengali', native: 'বাংলা', flag: '🇮🇳' },
+    { code: 'gu', name: 'Gujarati', native: 'ગુજરાતી', flag: '🇮🇳' },
+  ];
+
+  const handleSelectLanguage = async (lang: { code: string; name: string }) => {
+    setSelectedLanguage(lang.name);
+    dispatch(setLanguage(lang.name));
+    setShowLangModal(false);
+    try {
+      const baseUrl = API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '');
+      await apiClient.patch(`${baseUrl}/profile/me/settings`, { language: lang.name, preferredLanguage: lang.name });
+      Alert.alert("Language Saved", `Your preferred language is set to ${lang.name} and saved to database.`);
+    } catch (err: any) {
+      console.warn("Failed to persist language in DB:", err.message);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       const baseUrl = API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '');
@@ -28,6 +52,10 @@ export default function ProfileScreen() {
         .then(res => {
           if (res.data) {
             setProfileData(res.data);
+            if (res.data.language) {
+              setSelectedLanguage(res.data.language);
+              dispatch(setLanguage(res.data.language));
+            }
           }
         })
         .catch(err => console.log('Profile fetch note:', err.message));
@@ -39,7 +67,7 @@ export default function ProfileScreen() {
           }
         })
         .catch(err => console.log('Streak fetch note:', err.message));
-  }, [])
+    }, [])
   );
 
   const performLogout = async () => {
@@ -139,7 +167,12 @@ export default function ProfileScreen() {
         {/* Settings Section */}
         <Text style={[styles.sectionTitle, { marginTop: spacing.xl, marginBottom: spacing.md }]}>Settings</Text>
 
-        <SettingRow emoji="🇮🇳" label={`Language: ${PROFILE.language}`} chevron />
+        <SettingRow 
+          emoji="🌐" 
+          label={`Language: ${selectedLanguage}`} 
+          chevron 
+          onPress={() => setShowLangModal(true)} 
+        />
         <View style={styles.settingRow}>
           <Text style={styles.settingEmoji}>🔔</Text>
           <Text style={styles.settingLabel}>Daily reminders</Text>
@@ -174,6 +207,41 @@ export default function ProfileScreen() {
           <Text style={[styles.settingLabel, styles.logoutText]}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Language Selector Modal */}
+      {showLangModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalEmoji}>🌐</Text>
+            <Text style={styles.modalTitle}>Select AI Language</Text>
+            <Text style={styles.modalDescription}>Choose a language for AI Jargon & Content explanations:</Text>
+            <View style={{ width: '100%', gap: spacing.xs, marginVertical: spacing.md }}>
+              {WORKING_LANGUAGES.map(lang => (
+                <TouchableOpacity
+                  key={lang.code}
+                  style={[
+                    styles.langOption,
+                    selectedLanguage.toLowerCase().includes(lang.name.toLowerCase()) && styles.langOptionActive
+                  ]}
+                  onPress={() => handleSelectLanguage(lang)}
+                >
+                  <Text style={{ fontSize: 20 }}>{lang.flag}</Text>
+                  <Text style={[styles.langOptionText, selectedLanguage.toLowerCase().includes(lang.name.toLowerCase()) && styles.langOptionTextActive]}>
+                    {lang.name} ({lang.native})
+                  </Text>
+                  {selectedLanguage.toLowerCase().includes(lang.name.toLowerCase()) && <Text style={{ color: colors.purple, fontWeight: 'bold' }}>✓</Text>}
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity 
+              style={[styles.modalButton, styles.modalCancelButton, { width: '100%' }]} 
+              onPress={() => setShowLangModal(false)}
+            >
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {showLogoutModal && (
         <View style={styles.modalOverlay}>
@@ -365,5 +433,27 @@ const styles = StyleSheet.create({
     width: 1,
     height: 24,
     backgroundColor: colors.border,
-  }
+  },
+  langOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  langOptionActive: {
+    borderColor: colors.purple,
+    backgroundColor: colors.indigoChip,
+  },
+  langOptionText: {
+    ...typography.bodyBold,
+    color: colors.text,
+    flex: 1,
+  },
+  langOptionTextActive: {
+    color: colors.purple,
+  },
 });

@@ -20,6 +20,7 @@ import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { GOALS } from '../goals.data';
 import { setGoal, setLanguage } from '../slices/authSlice';
+import { apiClient } from '../../../core/api/apiClient';
 import mixpanel from '@core/mixpanel'; // Import mixpanel instance
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
@@ -175,6 +176,7 @@ export default function OnboardingScreen({ navigation }: Props) {
   const onSubmit = () => {
     dispatch(setLanguage(selectedLang));
     dispatch(setGoal(selectedGoal));
+    apiClient.patch('/profile/me/settings', { language: selectedLang, preferredLanguage: selectedLang }).catch(() => {});
     navigation.replace('MainTabs', { screen: 'Home' });
   };
 
