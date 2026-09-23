@@ -44,4 +44,9 @@ export type RootStackParamList = {
   };
   Community: undefined;
   SymbolSearch: undefined;
+  SIPCalculator: { initialAmount?: number; initialYears?: number; initialRate?: number } | undefined;
+  SIPSetup: { fundId?: string; defaultAmount?: number; goalId?: string; entrySource?: string } | undefined;
+  Goals: undefined;
+  MFPortfolio: undefined;
+  TaxReport: { financialYear?: string } | undefined;
 };
