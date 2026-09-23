@@ -6,13 +6,15 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useDispatch, useSelector } from 'react-redux';
+import axios from 'axios';
+import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
 import { Button } from '../../../shared/ui/Button';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { formatINR } from '../../../shared/format';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { marketService } from '../../market/market.service';
 import { Stock } from '../../market/market.types';
-import { buyStock, sellStock } from '../../portfolio/slices/portfolioSlice';
+import { buyStock, sellStock, fetchPortfolioSummary } from '../../portfolio/slices/portfolioSlice';
 import { addLocalOrder } from '../slices/orderSlice';
 import type { RootState, AppDispatch } from '../../../app/store';
 import mixpanel from '@core/mixpanel';
@@ -26,6 +28,7 @@ export default function BuySellScreen({ navigation, route }: Props) {
   const isBuyMode = mode === 'buy';
   
   const dispatch = useDispatch<AppDispatch>();
+  const token = useSelector((state: RootState) => (state.auth as any).accessToken);
   const cash = useSelector((state: RootState) => state.portfolio.cash);
   const [stock, setStock] = useState<Stock | null>(null);
   const [orderType, setOrderType] = useState<OrderType>('MARKET');
@@ -114,7 +117,7 @@ export default function BuySellScreen({ navigation, route }: Props) {
     });
   };
 
-  const onConfirm = () => {
+  const onConfirm = async () => {
     const totalAmount = Math.round(safePrice * qty);
     const clientOrderId = `client_ord_${Date.now()}`;
     const orderId = `ord_${Date.now()}`;
@@ -131,7 +134,7 @@ export default function BuySellScreen({ navigation, route }: Props) {
       balance_after_estimate: cash - (isBuyMode ? totalAmount : -totalAmount),
     });
 
-    // BRANCH: Dispatch either buyStock or sellStock based on mode
+    // 1. Dispatch local Redux update first
     if (isBuyMode) {
       dispatch(buyStock({
         symbol: stock!.symbol,
@@ -146,6 +149,40 @@ export default function BuySellScreen({ navigation, route }: Props) {
         shares: qty,
         price: safePrice,
       }));
+    }
+
+    // 2. Persist order to practice-service & portfolio-service in PostgreSQL
+    if (token) {
+      const headers = { Authorization: `Bearer ${token}` };
+      try {
+        if (isBuyMode) {
+          await axios.post(
+            API_ENDPOINTS.PORTFOLIO.BUY,
+            {
+              symbol: stock!.symbol,
+              name: stock!.name ?? symbol,
+              emoji: stock!.emoji ?? '📊',
+              shares: qty,
+              price: safePrice,
+            },
+            { headers }
+          );
+        }
+        await axios.post(
+          API_ENDPOINTS.TRADING.ORDERS,
+          {
+            symbol: stock!.symbol.replace('NSE:', ''),
+            side: isBuyMode ? 'BUY' : 'SELL',
+            shares: qty,
+            orderType: orderType === 'STOP LOSS' ? 'MARKET' : orderType,
+            clientOrderId,
+          },
+          { headers }
+        );
+        dispatch(fetchPortfolioSummary());
+      } catch (err: any) {
+        console.warn('Backend persistence error (falling back to local state):', err.message);
+      }
     }
     
     // Record in orderSlice order log with dynamic type

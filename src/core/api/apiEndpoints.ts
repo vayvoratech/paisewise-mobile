@@ -37,11 +37,16 @@ export const API_ENDPOINTS = {
     PROGRESS: `${BASE_URL}/learning/progress`,
   },
   TRADING: {
-    ORDERS: `${BASE_URL}/trading/orders`,
+    ORDERS: `${BASE_URL}/practice/orders`,
+    ACCOUNT: `${BASE_URL}/practice/account`,
+    STOCKS: `${BASE_URL}/practice/stocks`,
     HOLDINGS: `${BASE_URL}/trading/holdings`,
   },
   PORTFOLIO: {
-    SUMMARY: `${BASE_URL}/portfolio/summary`,
+    SUMMARY: `${BASE_URL}/portfolio/me`,
+    BUY: `${BASE_URL}/portfolio/buy`,
+    HOLDINGS: `${BASE_URL}/portfolio/me/holdings`,
+    AI_INSIGHT: `${BASE_URL}/portfolio/ai-insight`,
     PNL_REPORT: `${BASE_URL}/portfolio/pnl-report`,
     INSIGHTS: `${BASE_URL}/portfolio/insights`,
   },
