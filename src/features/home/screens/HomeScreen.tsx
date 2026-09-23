@@ -31,6 +31,7 @@ type Props = CompositeScreenProps<
 
 const QUICK_ACTIONS = [
   { emoji: '📚', label: 'Lessons', go: 'Learn' },
+  { emoji: '🌱', label: 'Mutual Funds', go: 'MutualFunds' },
   { emoji: '📈', label: 'Watchlist', go: 'Watchlist' },
   { emoji: '📊', label: 'Practice', go: 'Practice' },
   { emoji: '💼', label: 'Portfolio', go: 'Portfolio' },
@@ -311,6 +312,23 @@ export default function HomeScreen({ navigation }: Props) {
             </Card>
           ))}
         </View>
+
+        {/* Explore Mutual Funds AI Banner */}
+        <Card 
+          style={{ marginTop: spacing.md, padding: spacing.md, backgroundColor: '#F5F3FF', borderColor: '#DDD6FE', borderWidth: 1 }}
+          onPress={() => navigation.navigate('MutualFunds')}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.purple, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 20 }}>🤖</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ ...typography.bodyBold, color: colors.text }}>Mutual Funds Directory</Text>
+              <Text style={{ ...typography.caption, color: colors.textMuted, marginTop: 2 }}>Large, Mid & Debt funds curated by AI</Text>
+            </View>
+            <Text style={{ ...typography.bodyBold, color: colors.purple, fontSize: 16 }}>→</Text>
+          </View>
+        </Card>
       </ScrollView>
     </View>
   );

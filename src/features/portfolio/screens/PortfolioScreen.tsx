@@ -11,9 +11,12 @@ import { resetPortfolio } from '../slices/portfolioSlice';
 import mixpanel from '@core/mixpanel';
 
 const TABS = ['HOLDINGS', 'MUT. FUNDS', 'P&L REPORT'] as const;
+import { useNavigation } from '@react-navigation/native';
+
 type Tab = (typeof TABS)[number];
 
 export default function PortfolioScreen() {
+  const navigation = useNavigation<any>();
   const dispatch = useDispatch<AppDispatch>();
   const holdings = useSelector((state: RootState) => state.portfolio.holdings);
   const holdingsValue = useSelector((state: RootState) => state.portfolio.holdingsValue);
@@ -119,7 +122,21 @@ export default function PortfolioScreen() {
               );
             })}
 
-          {tab === 'MUT. FUNDS' && <Empty text="No mutual funds yet. Start a SIP from the Learn tab!" />}
+          {tab === 'MUT. FUNDS' && (
+            <Card style={{ marginTop: spacing.md, alignItems: 'center', paddingVertical: spacing.xl, paddingHorizontal: spacing.lg }}>
+              <Text style={{ fontSize: 36, marginBottom: spacing.sm }}>🌱</Text>
+              <Text style={{ ...typography.h3, color: colors.text, textAlign: 'center' }}>No Active Mutual Fund SIPs</Text>
+              <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: 4, marginBottom: spacing.lg }}>
+                Explore top Large Cap, Mid Cap & Debt mutual funds curated by PaiseWise AI.
+              </Text>
+              <TouchableOpacity
+                style={{ backgroundColor: colors.purple, paddingHorizontal: spacing.xl, paddingVertical: 12, borderRadius: radius.md }}
+                onPress={() => navigation.navigate('MutualFunds')}
+              >
+                <Text style={{ ...typography.bodyBold, color: colors.white }}>Explore Mutual Funds 🚀</Text>
+              </TouchableOpacity>
+            </Card>
+          )}
           {tab === 'P&L REPORT' && <Empty text={`Net practice P&L: ${formatINR(gain)} (${formatPct(gainPct)})`} />}
         </View>
       </ScrollView>

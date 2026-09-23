@@ -33,6 +33,10 @@ import WatchlistScreen from '../../features/watchlist/screens/WatchlistScreen';
 import SymbolSearchScreen from '../../features/search/screens/SymbolSearchScreen';
 import StockDetailScreen from '../../features/market/screens/StockDetailScreen';
 
+// Import Mutual Funds feature screens
+import MutualFundsScreen from '../../features/mutualfunds/screens/MutualFundsScreen';
+import FundDetailScreen from '../../features/mutualfunds/screens/FundDetailScreen';
+
 const Stack = createNativeStackNavigator<any>();
 
 function AppLockManager({ navigationRef }: { navigationRef: any }) {
@@ -126,6 +130,10 @@ export default function RootNavigator() {
         <Stack.Screen name="Watchlist" component={WatchlistScreen as any} />
         <Stack.Screen name="SymbolSearch" component={SymbolSearchScreen as any} />
         <Stack.Screen name="StockDetail" component={StockDetailScreen as any} /> 
+
+        {/* Mutual Funds feature screens */}
+        <Stack.Screen name="MutualFunds" component={MutualFundsScreen as any} />
+        <Stack.Screen name="FundDetail" component={FundDetailScreen as any} /> 
 
         {/* Transparent modal sheets */}
         <Stack.Group screenOptions={{ presentation: 'transparentModal', animation: 'slide_from_bottom' }}>

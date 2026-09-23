@@ -44,4 +44,6 @@ export type RootStackParamList = {
   };
   Community: undefined;
   SymbolSearch: undefined;
+  MutualFunds: { category?: 'all' | 'large' | 'mid' | 'debt' } | undefined;
+  FundDetail: { fundId: string; fundName?: string };
 };
