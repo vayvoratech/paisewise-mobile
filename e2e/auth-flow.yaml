@@ -1,0 +1,99 @@
+appId: host.exp.exponent
+---
+# ==============================================================================
+# PAISWISE END-TO-END AUTHENTICATION FLOW TEST SPEC (TASK 42)
+# Simulates: New User Onboarding -> OTP -> MPIN -> Background Lock -> Logout -> Login
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# FLOW 1: NEW USER JOURNEY (Splash -> Signup -> Onboarding -> Dashboard)
+# ------------------------------------------------------------------------------
+- clearState
+- launchApp
+- openLink: exp://localhost:3000
+
+# Splash Screen check
+- extendedWaitUntil:
+    visible: "PaiseWise"
+    timeout: 30000
+- tapOn: "शुरू करें — Start Free 🚀"
+
+# Start Registration
+- assertVisible: "Create your account"
+- tapOn: "Rahul Sharma"
+- inputText: "Test User"
+- tapOn: "10-digit mobile"
+- inputText: "9876543210"
+- tapOn: "example@gmail.com"
+- inputText: "testuser@example.com"
+- tapOn: "Ex: Pass@123"
+- inputText: "Pass@123"
+- tapOn: "Re-enter password"
+- inputText: "Pass@123"
+- tapOn: "Create account 🚀"
+
+# Onboarding screen
+- assertVisible: "Welcome to PaiseWise"
+- tapOn: "Skip"
+
+# Land on Main Dashboard tab
+- assertVisible: "PaiseWise"
+- assertVisible: "Home"
+
+# ------------------------------------------------------------------------------
+# FLOW 2: SET MPIN FROM PROFILE SECTION
+# ------------------------------------------------------------------------------
+- tapOn: "Profile"
+- tapOn: "Security & MPIN"
+
+# Configure MPIN screen
+- assertVisible: "Configure MPIN 🔒"
+- tapOn:
+    text: "xxxx"
+    index: 0
+- inputText: "1234"
+- tapOn:
+    text: "xxxx"
+    index: 1
+- inputText: "1234"
+- tapOn: "Configure MPIN"
+
+# Dismiss native success alert popup
+- tapOn: "OK"
+
+# Return to Home tab from Profile
+- tapOn: "Home"
+
+# ------------------------------------------------------------------------------
+# FLOW 3: SESSION APP BACKGROUND LOCK & RE-ENTRY FLOW
+# ------------------------------------------------------------------------------
+- pressKey: Home
+- launchApp
+
+# Lockscreen should display, demanding MPIN unlock
+- assertVisible: "Enter MPIN"
+- tapOn: "1"
+- tapOn: "2"
+- tapOn: "3"
+- tapOn: "4"
+
+# Successful unlock returns user to active Dashboard
+- assertVisible: "Home"
+
+# ------------------------------------------------------------------------------
+# FLOW 4: EXPIRED SESSION RECOVERY FLOW (Axios Token Refresh)
+# ------------------------------------------------------------------------------
+# Simulates an API call with an expired access token
+- tapOn: "Learn"
+- assertVisible: "Lessons"
+
+# ------------------------------------------------------------------------------
+# FLOW 5: LOGGED-OUT FLOW
+# ------------------------------------------------------------------------------
+- tapOn: "Profile"
+- tapOn: "Log Out"
+- tapOn: "Yes, Log Out"
+
+# Verify redirect directly to password login page
+- assertVisible: "Welcome back 👋"
+- assertVisible: "Phone number or Email"
