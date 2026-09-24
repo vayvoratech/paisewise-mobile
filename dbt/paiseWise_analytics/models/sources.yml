@@ -1,0 +1,39 @@
+version: 2
+
+sources:
+
+  - name: paisewise_raw
+    database: paisewise_dev
+    schema: raw_events
+    tables:
+      - name: raw_events
+
+  - name: paisewise_users
+    database: paisewise_dev
+    schema: public
+    tables:
+      - name: users
+
+  - name: raw_revenue
+    schema: raw_revenue
+    tables:
+      - name: revenue_transactions
+
+
+  - name: raw_extension
+    database: paisewise_dev
+    schema: raw_extension
+    tables:
+      - name: user_acquisition_geography
+      - name: portfolio_holding_snapshots
+      - name: notification_delivery
+      - name: community_questions
+      - name: ai_usage_quality
+      - name: experiment_assignments
+      - name: marketing_campaign_daily
+      - name: revenue_monthly_targets
+      - name: operational_costs_daily
+      - name: experiment_outcomes
+      - name: pipeline_metadata
+      - name: revenue_reconciliation
+      - name: order_outcomes

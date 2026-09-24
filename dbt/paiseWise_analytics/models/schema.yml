@@ -1,0 +1,347 @@
+version: 2
+
+models:
+
+  - name: stg_events
+    description: "Cleaned and deduplicated event data from the raw event layer."
+    columns:
+      - name: event_id
+        tests:
+          - not_null
+
+      - name: event_name
+        tests:
+          - not_null
+
+      - name: occurred_at
+        tests:
+          - not_null
+
+      - name: date
+        tests:
+          - not_null
+
+
+  - name: fct_user_daily
+    description: "Daily user-level activity metrics."
+    columns:
+      - name: user_id
+        tests:
+          - not_null
+
+      - name: date
+        tests:
+          - not_null
+
+      - name: event_count
+        tests:
+          - not_null
+
+      - name: is_active
+        tests:
+          - not_null
+
+
+  - name: fct_retention
+    description: "Cohort retention metrics for 1, 7, 14 and 30 day periods."
+    columns:
+      - name: cohort_week
+        tests:
+          - not_null
+
+      - name: retention_day
+        tests:
+          - not_null
+
+      - name: cohort_size
+        tests:
+          - not_null
+
+     
+
+
+  - name: fct_funnel_daily
+    description: "Daily distinct-user funnel metrics and conversion percentages."
+    columns:
+      - name: date
+        tests:
+          - not_null
+
+      - name: stage_app_opened
+        tests:
+          - not_null
+
+      - name: stage_signup_started
+        tests:
+          - not_null
+
+      - name: stage_registered
+        tests:
+          - not_null
+
+      - name: stage_goal_selected
+        tests:
+          - not_null
+
+      - name: stage_lesson_completed
+        tests:
+          - not_null
+
+      - name: stage_quiz_completed
+        tests:
+          - not_null
+
+      - name: stage_paper_trade
+        tests:
+          - not_null
+
+      - name: stage_kyc_completed
+        tests:
+          - not_null
+
+      - name: stage_real_trade
+        tests:
+          - not_null
+
+
+  - name: stg_experiment_outcomes
+    description: "Experiment outcome events from the extension source."
+    columns:
+      - name: outcome_id
+        tests:
+          - not_null
+          - unique
+
+      - name: experiment_name
+        tests:
+          - not_null
+
+      - name: experiment_id
+        tests:
+          - not_null
+
+      - name: user_slot
+        tests:
+          - not_null
+
+      - name: variant
+        tests:
+          - not_null
+
+      - name: event_name
+        tests:
+          - not_null
+
+      - name: event_at
+        tests:
+          - not_null
+
+
+  - name: stg_pipeline_metadata
+    description: "Pipeline execution and freshness metadata."
+    columns:
+      - name: metadata_id
+        tests:
+          - not_null
+          - unique
+
+      - name: pipeline_name
+        tests:
+          - not_null
+
+      - name: run_at
+        tests:
+          - not_null
+
+      - name: source_last_event_at
+        tests:
+          - not_null
+
+      - name: model_refresh_at
+        tests:
+          - not_null
+
+      - name: pipeline_status
+        tests:
+          - not_null
+
+
+  - name: stg_revenue_reconciliation
+    description: "Daily source-to-warehouse revenue reconciliation records."
+    columns:
+      - name: reconciliation_id
+        tests:
+          - not_null
+          - unique
+
+      - name: reconciliation_date
+        tests:
+          - not_null
+
+      - name: source_revenue
+        tests:
+          - not_null
+
+      - name: warehouse_revenue
+        tests:
+          - not_null
+
+      - name: difference_amount
+        tests:
+          - not_null
+
+      - name: difference_pct
+        tests:
+          - not_null
+
+      - name: status
+        tests:
+          - not_null
+
+
+  - name: stg_order_outcomes
+    description: "Order resolution outcomes from the extension source."
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+          - unique
+
+      - name: user_slot
+        tests:
+          - not_null
+
+      - name: symbol
+        tests:
+          - not_null
+
+      - name: side
+        tests:
+          - not_null
+
+      - name: order_type
+        tests:
+          - not_null
+
+      - name: status
+        tests:
+          - not_null
+
+      - name: placed_at
+        tests:
+          - not_null
+
+      - name: resolved_at
+        tests:
+          - not_null
+
+
+  - name: fct_experiment_results
+    description: "Experiment outcome events used for experiment performance analysis."
+    columns:
+      - name: outcome_id
+        tests:
+          - not_null
+          - unique
+
+      - name: experiment_name
+        tests:
+          - not_null
+
+      - name: experiment_id
+        tests:
+          - not_null
+
+      - name: user_slot
+        tests:
+          - not_null
+
+      - name: variant
+        tests:
+          - not_null
+
+      - name: event_name
+        tests:
+          - not_null
+
+      - name: event_at
+        tests:
+          - not_null
+
+      - name: event_date
+        tests:
+          - not_null
+
+
+  - name: fct_pipeline_health
+    description: "Pipeline freshness and operational health records."
+    columns:
+      - name: metadata_id
+        tests:
+          - not_null
+          - unique
+
+      - name: pipeline_name
+        tests:
+          - not_null
+
+      - name: run_at
+        tests:
+          - not_null
+
+      - name: source_last_event_at
+        tests:
+          - not_null
+
+      - name: model_refresh_at
+        tests:
+          - not_null
+
+      - name: pipeline_status
+        tests:
+          - not_null
+
+      - name: run_date
+        tests:
+          - not_null
+
+
+  - name: fct_order_outcomes
+    description: "Order-level resolution outcomes used for trading quality analysis."
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+          - unique
+
+      - name: user_slot
+        tests:
+          - not_null
+
+      - name: symbol
+        tests:
+          - not_null
+
+      - name: side
+        tests:
+          - not_null
+
+      - name: order_type
+        tests:
+          - not_null
+
+      - name: status
+        tests:
+          - not_null
+
+      - name: placed_at
+        tests:
+          - not_null
+
+      - name: resolved_at
+        tests:
+          - not_null
+
+      - name: order_date
+        tests:
+          - not_null
