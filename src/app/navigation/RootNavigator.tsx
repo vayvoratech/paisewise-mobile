@@ -33,6 +33,15 @@ import WatchlistScreen from '../../features/watchlist/screens/WatchlistScreen';
 import SymbolSearchScreen from '../../features/search/screens/SymbolSearchScreen';
 import StockDetailScreen from '../../features/market/screens/StockDetailScreen';
 
+// Import SIP & Goals screens
+import SIPCalculatorScreen from '../../features/sip/screens/SIPCalculatorScreen';
+import SIPSetupScreen from '../../features/sip/screens/SIPSetupScreen';
+import GoalsScreen from '../../features/sip/screens/GoalsScreen';
+
+// Import Mutual Funds & Tax screens
+import MFPortfolioScreen from '../../features/portfolio/screens/MFPortfolioScreen';
+import TaxReportScreen from '../../features/portfolio/screens/TaxReportScreen';
+
 const Stack = createNativeStackNavigator<any>();
 
 function AppLockManager({ navigationRef }: { navigationRef: any }) {
@@ -126,6 +135,15 @@ export default function RootNavigator() {
         <Stack.Screen name="Watchlist" component={WatchlistScreen as any} />
         <Stack.Screen name="SymbolSearch" component={SymbolSearchScreen as any} />
         <Stack.Screen name="StockDetail" component={StockDetailScreen as any} /> 
+
+        {/* SIP & Goal Tracking screens */}
+        <Stack.Screen name="SIPCalculator" component={SIPCalculatorScreen as any} />
+        <Stack.Screen name="SIPSetup" component={SIPSetupScreen as any} />
+        <Stack.Screen name="Goals" component={GoalsScreen as any} />
+
+        {/* Mutual Funds Portfolio & Tax Report screens */}
+        <Stack.Screen name="MFPortfolio" component={MFPortfolioScreen as any} />
+        <Stack.Screen name="TaxReport" component={TaxReportScreen as any} />
 
         {/* Transparent modal sheets */}
         <Stack.Group screenOptions={{ presentation: 'transparentModal', animation: 'slide_from_bottom' }}>

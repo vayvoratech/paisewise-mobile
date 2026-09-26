@@ -30,8 +30,10 @@ type Props = CompositeScreenProps<
 
 const QUICK_ACTIONS = [
   { emoji: '📚', label: 'Lessons', go: 'Learn' },
-  { emoji: '📈', label: 'Watchlist', go: 'Watchlist' },
-  { emoji: '📊', label: 'Practice', go: 'Practice' },
+  { emoji: '⚡', label: 'SIP Setup', go: 'SIPSetup' },
+  { emoji: '🎯', label: 'Goals', go: 'Goals' },
+  { emoji: '📊', label: 'Mutual Funds', go: 'MFPortfolio' },
+  { emoji: '🧮', label: 'Calculator', go: 'SIPCalculator' },
   { emoji: '💼', label: 'Portfolio', go: 'Portfolio' },
 ];
 
@@ -299,6 +301,31 @@ export default function HomeScreen({ navigation }: Props) {
             </View>
           </>
         )}
+
+        {/* Wealth & SIP Goal Tracker Banner */}
+        <View style={[styles.sectionHead, { marginTop: spacing.xl }]}>
+          <Text style={styles.sectionTitle}>Automate Your Wealth</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Goals')}>
+            <Text style={styles.seeAll}>VIEW GOALS</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.navigate('SIPCalculator')}>
+          <Card style={{ backgroundColor: '#1E1B4B', padding: spacing.lg, borderRadius: radius.lg }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 22 }}>🚀</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ ...typography.bodyBold, color: colors.white }}>SIP & Compounding Calculator</Text>
+                <Text style={{ ...typography.caption, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
+                  See how small monthly savings grow into substantial wealth over 5-15 years.
+                </Text>
+              </View>
+              <Text style={{ color: colors.amberBright, fontWeight: '700', fontSize: 13 }}>Try →</Text>
+            </View>
+          </Card>
+        </TouchableOpacity>
 
         {/* Quick actions */}
         <Text style={[styles.sectionTitle, { marginTop: spacing.xl, marginBottom: spacing.md }]}>Quick Actions</Text>

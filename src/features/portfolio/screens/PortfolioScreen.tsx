@@ -6,6 +6,7 @@ import { Card } from '../../../shared/ui/Card';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { formatINR, formatPct } from '../../../shared/format';
 import { useSelector, useDispatch } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
 import type { RootState, AppDispatch } from '../../../app/store';
 import { resetPortfolio } from '../slices/portfolioSlice';
 import mixpanel from '@core/mixpanel';
@@ -14,9 +15,11 @@ const TABS = ['HOLDINGS', 'MUT. FUNDS', 'P&L REPORT'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function PortfolioScreen() {
+  const navigation = useNavigation<any>();
   const dispatch = useDispatch<AppDispatch>();
   const holdings = useSelector((state: RootState) => state.portfolio.holdings);
   const holdingsValue = useSelector((state: RootState) => state.portfolio.holdingsValue);
+  const mfHoldings = useSelector((state: RootState) => state.mfPortfolio.holdings);
   const cash = useSelector((state: RootState) => state.portfolio.cash);
   const starting = 100_000;
   const [tab, setTab] = useState<Tab>('HOLDINGS');
@@ -119,8 +122,77 @@ export default function PortfolioScreen() {
               );
             })}
 
-          {tab === 'MUT. FUNDS' && <Empty text="No mutual funds yet. Start a SIP from the Learn tab!" />}
-          {tab === 'P&L REPORT' && <Empty text={`Net practice P&L: ${formatINR(gain)} (${formatPct(gainPct)})`} />}
+          {tab === 'MUT. FUNDS' && (
+            <View style={{ gap: spacing.md }}>
+              <Card style={{ backgroundColor: '#1E1B4B', padding: spacing.lg, borderRadius: radius.lg }}>
+                <Text style={{ ...typography.overline, color: 'rgba(255,255,255,0.7)' }}>MUTUAL FUNDS VALUATION</Text>
+                <Text style={{ ...typography.hero, color: colors.white, marginTop: 4 }}>
+                  {formatINR(mfHoldings.reduce((sum, h) => sum + h.currentValue, 0))}
+                </Text>
+                <Text style={{ ...typography.caption, color: colors.greenBright, marginTop: 2 }}>
+                  +{formatINR(mfHoldings.reduce((sum, h) => sum + h.totalReturns, 0))} overall returns
+                </Text>
+                <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('MFPortfolio')}
+                    style={{ flex: 1, backgroundColor: colors.purple, paddingVertical: spacing.sm, borderRadius: radius.md, alignItems: 'center' }}
+                  >
+                    <Text style={{ color: colors.white, fontWeight: '700', fontSize: 13 }}>Open MF Portfolio</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('SIPSetup')}
+                    style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.15)', paddingVertical: spacing.sm, borderRadius: radius.md, alignItems: 'center' }}
+                  >
+                    <Text style={{ color: colors.white, fontWeight: '700', fontSize: 13 }}>+ Start SIP</Text>
+                  </TouchableOpacity>
+                </View>
+              </Card>
+
+              {mfHoldings.slice(0, 3).map((h) => (
+                <TouchableOpacity key={h.id} onPress={() => navigation.navigate('MFPortfolio')}>
+                  <Card style={styles.holding}>
+                    <View style={styles.holdingHead}>
+                      <View style={[styles.holdingIcon, { backgroundColor: '#F3E8FF' }]}>
+                        <Text style={{ fontSize: 20 }}>📊</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.holdingSym} numberOfLines={1}>{h.fundName}</Text>
+                        <Text style={styles.holdingMeta}>{h.units.toFixed(2)} units · NAV {formatINR(h.currentNav)}</Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={styles.holdingValue}>{formatINR(h.currentValue)}</Text>
+                        <Text style={[styles.holdingChange, { color: colors.green }]}>+{h.xirr}% XIRR</Text>
+                      </View>
+                    </View>
+                  </Card>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {tab === 'P&L REPORT' && (
+            <View style={{ gap: spacing.md }}>
+              <Card style={{ padding: spacing.lg }}>
+                <Text style={{ ...typography.h3, color: colors.text }}>Capital Gains & Tax Estimator</Text>
+                <Text style={{ ...typography.body, color: colors.textMuted, marginTop: 4, fontSize: 13 }}>
+                  View LTCG (Section 112A), STCG (Section 111A), ELSS 80C benefits, and download official PDF tax statement.
+                </Text>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('TaxReport')}
+                  style={{ backgroundColor: colors.purple, paddingVertical: spacing.md, borderRadius: radius.md, alignItems: 'center', marginTop: spacing.md }}
+                >
+                  <Text style={{ color: colors.white, fontWeight: '700', fontSize: 14 }}>🧾 View Capital Gains Tax Report</Text>
+                </TouchableOpacity>
+              </Card>
+
+              <Card style={{ padding: spacing.lg, backgroundColor: colors.surfaceMuted }}>
+                <Text style={{ ...typography.overline, color: colors.textMuted }}>NET PRACTICE PORTFOLIO P&L</Text>
+                <Text style={{ ...typography.h2, color: gain >= 0 ? colors.green : colors.pink, marginTop: 4 }}>
+                  {gain >= 0 ? '+' : ''}{formatINR(gain)} ({formatPct(gainPct)})
+                </Text>
+              </Card>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
