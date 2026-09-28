@@ -4,6 +4,7 @@ import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
 
 interface Order {
   id?: string;
+  clientOrderId?: string;
   symbol: string;
   shares: number;
   pricePerShare: number;

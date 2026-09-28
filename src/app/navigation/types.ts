@@ -33,7 +33,7 @@ export type RootStackParamList = {
   JargonBuster: { term: string };
   Quiz: { lessonId?: string } | undefined;
   StockDetail: { symbol: string };
-  BuySell: { symbol: string; action: 'BUY' | 'SELL'; mode?: 'buy' | 'sell' };
+  BuySell: { symbol: string; action?: 'BUY' | 'SELL'; mode?: 'buy' | 'sell' };
   TradeSuccess: {
     symbol: string;
     shares: number;
@@ -41,6 +41,7 @@ export type RootStackParamList = {
     totalPaid: number;
     xpEarned: number;
     mode?: 'buy' | 'sell';
+    clientOrderId?: string;
   };
   Community: undefined;
   SymbolSearch: undefined;
