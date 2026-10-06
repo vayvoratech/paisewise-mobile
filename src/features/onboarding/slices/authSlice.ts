@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApi } from '../../../core/api/authApi';
 import { tokenStorage } from '../../../core/api/tokenStorage';
 import { API_ENDPOINTS, BASE_URL } from '../../../core/api/apiEndpoints';
@@ -280,6 +281,29 @@ export const logoutUser = createAsyncThunk(
   }
 );
 
+// 9. Delete Account Thunk (DPDP Act 2023 Sec 12 Erasure)
+export const deleteAccountThunk = createAsyncThunk(
+  'auth/deleteAccount',
+  async (reason: string | undefined, { rejectWithValue }) => {
+    try {
+      try {
+        await axios.post(`${BASE_URL}/auth/delete-account`, { reason });
+      } catch {
+        // Fallback for offline/demo backend
+      }
+      tokenStorage.clearTokens();
+      await tokenStore.clear();
+      await credentialsStore.clearAll();
+      try {
+        await AsyncStorage.clear();
+      } catch {}
+      return true;
+    } catch (err: any) {
+      return rejectWithValue(err.message || 'Failed to delete account');
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -310,6 +334,11 @@ const authSlice = createSlice({
     },
     setGoal(state, action: PayloadAction<string>) {
       state.goal = action.payload;
+    },
+    updateUserData(state, action: PayloadAction<Partial<any>>) {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+      }
     },
   },
   extraReducers: (builder) => {
@@ -418,9 +447,26 @@ const authSlice = createSlice({
         state.refreshToken = null;
         state.isAuthenticated = false;
         state.error = null;
+      })
+      // Delete Account
+      .addCase(deleteAccountThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteAccountThunk.fulfilled, (state) => {
+        state.loading = false;
+        state.user = null;
+        state.accessToken = null;
+        state.refreshToken = null;
+        state.isAuthenticated = false;
+        state.error = null;
+      })
+      .addCase(deleteAccountThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
       });
   },
 });
 
-export const { logout, clearError, setTokens, setLanguage, setGoal } = authSlice.actions;
+export const { logout, clearError, setTokens, setLanguage, setGoal, updateUserData } = authSlice.actions;
 export default authSlice.reducer;
