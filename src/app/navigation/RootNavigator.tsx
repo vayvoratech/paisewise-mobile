@@ -20,8 +20,11 @@ import JargonBusterScreen from '../../features/learn/screens/JargonBusterScreen'
 import QuizScreen from '../../features/quiz/screens/QuizScreen';
 import BuySellScreen from '../../features/practice/screens/BuySellScreen';
 import TradeSuccessScreen from '../../features/practice/screens/TradeSuccessScreen';
+import PaperPortfolioScreen from '../../features/practice/screens/PaperPortfolioScreen';
 import CommunityScreen from '../../features/community/screens/CommunityScreen';
 import BadgesScreen from '../../features/profile/screens/BadgesScreen';
+import SettingsScreen from '../../features/profile/screens/SettingsScreen';
+import HelpScreen from '../../features/profile/screens/HelpScreen';
 
 // Import MPIN feature screens
 import MpinLoginScreen from '../../features/onboarding/screens/MpinLoginScreen';
@@ -125,6 +128,8 @@ export default function RootNavigator() {
         <Stack.Screen name="Quiz" component={QuizScreen as any} />
         <Stack.Screen name="Community" component={CommunityScreen} />
         <Stack.Screen name="Badges" component={BadgesScreen as any} />
+        <Stack.Screen name="Settings" component={SettingsScreen as any} />
+        <Stack.Screen name="Help" component={HelpScreen as any} />
         
         {/* MPIN / Biometric screens at root level to support global overlay locking */}
         <Stack.Screen name="MpinLogin" component={MpinLoginScreen as any} />
@@ -144,6 +149,7 @@ export default function RootNavigator() {
         {/* Mutual Funds Portfolio & Tax Report screens */}
         <Stack.Screen name="MFPortfolio" component={MFPortfolioScreen as any} />
         <Stack.Screen name="TaxReport" component={TaxReportScreen as any} />
+        <Stack.Screen name="PaperPortfolio" component={PaperPortfolioScreen as any} />
 
         {/* Transparent modal sheets */}
         <Stack.Group screenOptions={{ presentation: 'transparentModal', animation: 'slide_from_bottom' }}>

@@ -111,6 +111,13 @@ export default function SplashScreen({ navigation }: Props) {
     navigation.navigate('Signup');
   };
 
+  const handleQuickDemo = () => {
+    const demoToken = 'demo-token-' + Date.now();
+    tokenStorage.setAccessToken(demoToken);
+    dispatch(setTokens({ accessToken: demoToken, refreshToken: 'demo-refresh' }));
+    replaceScreen('MainTabs', { screen: 'Practice' });
+  };
+
   return (
     <HeroBackground tone="navy">
       <SafeAreaView style={styles.safe}>
@@ -132,7 +139,17 @@ export default function SplashScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.footer}>
-          <Button label="शुरू करें — Start Free 🚀" variant="gradientAmber" onPress={handleStartFreePress} />
+          <Button
+            label="🎮 Quick Demo / Practice Mode (1-Click)"
+            variant="gradientAmber"
+            onPress={handleQuickDemo}
+          />
+          <Button
+            label="शुरू करें — Start Free 🚀"
+            variant="outline"
+            style={styles.loginBtn}
+            onPress={handleStartFreePress}
+          />
           <Button
             label="Already have an account? Log in"
             variant="outline"

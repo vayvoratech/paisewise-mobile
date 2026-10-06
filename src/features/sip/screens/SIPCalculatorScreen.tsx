@@ -170,19 +170,19 @@ export default function SIPCalculatorScreen() {
           presetChips={
             mode === 'sip'
               ? [
-                  { label: '₹1K', value: 1000 },
-                  { label: '₹2.5K', value: 2500 },
-                  { label: '₹5K', value: 5000 },
-                  { label: '₹10K', value: 10000 },
-                  { label: '₹25K', value: 25000 },
-                ]
+                { label: '₹1K', value: 1000 },
+                { label: '₹2.5K', value: 2500 },
+                { label: '₹5K', value: 5000 },
+                { label: '₹10K', value: 10000 },
+                { label: '₹25K', value: 25000 },
+              ]
               : [
-                  { label: '₹25K', value: 25000 },
-                  { label: '₹50K', value: 50000 },
-                  { label: '₹1L', value: 100000 },
-                  { label: '₹2.5L', value: 250000 },
-                  { label: '₹5L', value: 500000 },
-                ]
+                { label: '₹25K', value: 25000 },
+                { label: '₹50K', value: 50000 },
+                { label: '₹1L', value: 100000 },
+                { label: '₹2.5L', value: 250000 },
+                { label: '₹5L', value: 500000 },
+              ]
           }
           onChange={setAmount}
         />
@@ -237,10 +237,10 @@ export default function SIPCalculatorScreen() {
               const mFuture =
                 mode === 'sip'
                   ? Math.round(
-                      amount *
-                        (((Math.pow(1 + mRate, mMonths) - 1) / mRate) *
-                          (1 + mRate))
-                    )
+                    amount *
+                    (((Math.pow(1 + mRate, mMonths) - 1) / mRate) *
+                      (1 + mRate))
+                  )
                   : Math.round(amount * Math.pow(1 + returnRate / 100, m));
 
               return (

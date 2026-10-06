@@ -54,6 +54,22 @@ export default function PortfolioScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.sheet}>
+          {/* Practice Portfolio & Charts Entry Banner */}
+          <TouchableOpacity
+            style={styles.paperBanner}
+            onPress={() => navigation.navigate('PaperPortfolio')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.paperBannerLeft}>
+              <Text style={styles.paperBannerIcon}>🎮</Text>
+              <View>
+                <Text style={styles.paperBannerTitle}>Paper Portfolio & Charts</Text>
+                <Text style={styles.paperBannerSub}>Practice holdings, open limit orders & 1D/1W/1M charts</Text>
+              </View>
+            </View>
+            <Text style={styles.paperBannerArrow}>›</Text>
+          </TouchableOpacity>
+
           {/* Why insight */}
           <View style={styles.insight}>
             <Text style={styles.insightIcon}>💡</Text>
@@ -211,6 +227,42 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceAlt },
   scrollContent: { paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: 120 },
   sheet: { gap: spacing.lg },
+  paperBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1E1B4B',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
+  },
+  paperBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
+  paperBannerIcon: {
+    fontSize: 24,
+  },
+  paperBannerTitle: {
+    ...typography.bodyBold,
+    color: colors.white,
+    fontSize: 14,
+  },
+  paperBannerSub: {
+    ...typography.caption,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 11,
+    marginTop: 1,
+  },
+  paperBannerArrow: {
+    color: colors.white,
+    fontSize: 22,
+    fontWeight: '700',
+    marginLeft: spacing.sm,
+  },
   insight: { flexDirection: 'row', gap: spacing.md, backgroundColor: colors.yellowCard, borderRadius: radius.md, padding: spacing.lg },
   insightIcon: { fontSize: 22 },
   insightTitle: { ...typography.bodyBold, color: '#92722A' },
