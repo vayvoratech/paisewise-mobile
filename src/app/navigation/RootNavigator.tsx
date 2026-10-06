@@ -22,6 +22,8 @@ import BuySellScreen from '../../features/practice/screens/BuySellScreen';
 import TradeSuccessScreen from '../../features/practice/screens/TradeSuccessScreen';
 import CommunityScreen from '../../features/community/screens/CommunityScreen';
 import BadgesScreen from '../../features/profile/screens/BadgesScreen';
+import SettingsScreen from '../../features/profile/screens/SettingsScreen';
+import HelpScreen from '../../features/profile/screens/HelpScreen';
 
 // Import MPIN feature screens
 import MpinLoginScreen from '../../features/onboarding/screens/MpinLoginScreen';
@@ -125,6 +127,8 @@ export default function RootNavigator() {
         <Stack.Screen name="Quiz" component={QuizScreen as any} />
         <Stack.Screen name="Community" component={CommunityScreen} />
         <Stack.Screen name="Badges" component={BadgesScreen as any} />
+        <Stack.Screen name="Settings" component={SettingsScreen as any} />
+        <Stack.Screen name="Help" component={HelpScreen as any} />
         
         {/* MPIN / Biometric screens at root level to support global overlay locking */}
         <Stack.Screen name="MpinLogin" component={MpinLoginScreen as any} />

@@ -50,4 +50,6 @@ export type RootStackParamList = {
   Goals: undefined;
   MFPortfolio: undefined;
   TaxReport: { financialYear?: string } | undefined;
+  Settings: undefined;
+  Help: undefined;
 };
