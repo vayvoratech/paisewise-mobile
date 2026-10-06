@@ -17,7 +17,8 @@ import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch } from 'react-redux';
-import { loginUser } from '../slices/authSlice';
+import { loginUser, setTokens } from '../slices/authSlice';
+import { tokenStorage } from '../../../core/api/tokenStorage';
 import mixpanel from '@core/mixpanel';
 import { Analytics } from '../../../core/analyticsService'; 
 
@@ -139,6 +140,17 @@ export default function LoginScreen({ navigation }: Props) {
 
             {error ? <Text style={styles.error}>{error}</Text> : null}
             <Button label="Log in" variant="gradientAmber" loading={loading} onPress={onSubmit} />
+            <Button
+              label="⚡ Quick Demo / Practice Entry (1-Click)"
+              variant="outline"
+              style={{ marginTop: spacing.md }}
+              onPress={() => {
+                const demoToken = 'demo-token-' + Date.now();
+                tokenStorage.setAccessToken(demoToken);
+                dispatch(setTokens({ accessToken: demoToken, refreshToken: 'demo-refresh' }));
+                navigation.replace('MainTabs', { screen: 'Practice' });
+              }}
+            />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>

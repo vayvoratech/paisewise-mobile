@@ -329,6 +329,20 @@ export default function PracticeScreen({ navigation }: Props) {
                   </Text>
                 </View>
               </View>
+
+              {/* Action Button to Open PaperPortfolioScreen */}
+              <TouchableOpacity
+                style={styles.openPortfolioBtn}
+                onPress={() => navigation.navigate('PaperPortfolio')}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.openPortfolioIcon}>📊</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.openPortfolioTitle}>Paper Portfolio & Charts</Text>
+                  <Text style={styles.openPortfolioSub}>1D/1W/1M Area chart, holdings & limit orders</Text>
+                </View>
+                <Text style={styles.openPortfolioArrow}>›</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </SafeAreaView>
@@ -348,8 +362,8 @@ export default function PracticeScreen({ navigation }: Props) {
           <View style={styles.holdingsSection}>
             <View style={styles.sectionHeaderRow}>
               <Text style={styles.sectionTitle}>Your Practice Positions ({holdings.length})</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Portfolio')}>
-                <Text style={styles.seeAllText}>View All →</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('PaperPortfolio')}>
+                <Text style={styles.seeAllText}>View All & Charts →</Text>
               </TouchableOpacity>
             </View>
 
@@ -693,6 +707,37 @@ const styles = StyleSheet.create({
     width: 1,
     height: 24,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  openPortfolioBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(52, 211, 153, 0.12)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(52, 211, 153, 0.25)',
+    gap: spacing.sm,
+  },
+  openPortfolioIcon: {
+    fontSize: 20,
+  },
+  openPortfolioTitle: {
+    ...typography.bodyBold,
+    color: colors.greenBright,
+    fontSize: 13,
+  },
+  openPortfolioSub: {
+    ...typography.caption,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 10,
+    marginTop: 1,
+  },
+  openPortfolioArrow: {
+    color: colors.greenBright,
+    fontSize: 18,
+    fontWeight: '700',
   },
   sheet: {
     flex: 1,

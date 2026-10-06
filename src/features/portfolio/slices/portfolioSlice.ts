@@ -119,7 +119,10 @@ const portfolioSlice = createSlice({
       state.invested = 0;
       state.holdingsValue = 0;
       state.xp = 0;
-    }
+    },
+    refundCash: (state, action: PayloadAction<{ amount: number }>) => {
+      state.cash += action.payload.amount;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -142,5 +145,5 @@ const portfolioSlice = createSlice({
   },
 });
 
-export const { buyStock, sellStock, resetPortfolio } = portfolioSlice.actions;
+export const { buyStock, sellStock, resetPortfolio, refundCash } = portfolioSlice.actions;
 export default portfolioSlice.reducer;
