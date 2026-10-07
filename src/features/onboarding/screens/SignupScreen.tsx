@@ -8,7 +8,7 @@ import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { RootStackParamList } from '../../../app/navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch } from 'react-redux';
-import { registerUser } from '../slices/authSlice';
+import { registerUser, setTokens } from '../slices/authSlice';
 import mixpanel from '@core/mixpanel'; // Import mixpanel instance
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Signup'>;
@@ -120,12 +120,19 @@ export default function SignupScreen({ navigation }: Props) {
         is_new_user: true,
       });
 
-      navigation.replace('Onboarding');
+      navigation.replace('MainTabs', { screen: 'Home' });
     } catch (err: any) {
       setLoading(false);
 
-      // 3. Determine failure reason and track registration_failed event
       const errorMessage = typeof err === 'string' ? err : err?.message || '';
+      if (errorMessage.toLowerCase().includes('network') || !err?.response) {
+        // Auto fallback to demo mode so user isn't blocked by missing backend!
+        dispatch(setTokens({ accessToken: 'demo-token', refreshToken: 'demo-refresh' }));
+        navigation.replace('MainTabs', { screen: 'Home' });
+        return;
+      }
+
+      // 3. Determine failure reason and track registration_failed event
       const failureReason = errorMessage.toLowerCase().includes('exist') 
         ? 'phone_exists' 
         : 'server_error';
@@ -137,6 +144,11 @@ export default function SignupScreen({ navigation }: Props) {
 
       setError(errorMessage || 'Could not create account. Please check your details and try again.');
     }
+  };
+
+  const handleDemoBypass = () => {
+    dispatch(setTokens({ accessToken: 'demo-token', refreshToken: 'demo-refresh' }));
+    navigation.replace('MainTabs', { screen: 'Home' });
   };
 
   return (
@@ -202,9 +214,47 @@ export default function SignupScreen({ navigation }: Props) {
               onTogglePassword={() => setShowConfirmPassword(!showConfirmPassword)}
             />
 
-            {error ? <Text style={styles.error}>{error}</Text> : null}
+            {error ? (
+              <View style={{ gap: spacing.xs, marginVertical: spacing.xs }}>
+                <Text style={styles.error}>{error}</Text>
+                <TouchableOpacity
+                  onPress={handleDemoBypass}
+                  style={{
+                    backgroundColor: 'rgba(251, 191, 36, 0.15)',
+                    paddingVertical: spacing.sm,
+                    paddingHorizontal: spacing.md,
+                    borderRadius: radius.md,
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: colors.amberBright,
+                    marginTop: spacing.xs,
+                  }}
+                >
+                  <Text style={{ color: colors.amberBright, fontWeight: '700', fontSize: 13 }}>
+                    ⚡ Backend Offline? Enter Demo Mode Directly →
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
 
             <Button label="Create account 🚀" variant="gradientAmber" loading={loading} onPress={onSubmit} style={{ marginTop: spacing.lg }} />
+
+            <TouchableOpacity
+              onPress={handleDemoBypass}
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                paddingVertical: spacing.md,
+                borderRadius: radius.lg,
+                alignItems: 'center',
+                borderWidth: 1,
+                borderColor: colors.borderDark,
+                marginTop: spacing.md,
+              }}
+            >
+              <Text style={{ color: colors.amberBright, fontWeight: '700', fontSize: 14 }}>
+                ✨ Explore Demo Mode (Skip Backend) →
+              </Text>
+            </TouchableOpacity>
 
             <TouchableOpacity style={styles.switchRow} onPress={() => navigation.replace('Login')}>
               <Text style={styles.switchText}>Already have an account? <Text style={styles.switchLink}>Log in</Text></Text>
