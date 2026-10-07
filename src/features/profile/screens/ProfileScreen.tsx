@@ -15,7 +15,8 @@ import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
 export default function ProfileScreen() {
   const [reminders, setReminders] = useState(PROFILE.dailyReminders);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [profileData, setProfileData] = useState<{ name?: string; dayStreak?: number; xpTotal?: number; level?: number } | null>(null);  const [streakData, setStreakData] = useState<{ currentStreak?: number; maxStreak?: number } | null>(null);
+  const [profileData, setProfileData] = useState<{ name?: string; dayStreak?: number; xpTotal?: number; level?: number } | null>(null);
+  const [streakData, setStreakData] = useState<{ currentStreak?: number; maxStreak?: number } | null>(null);
   const [aiFeatures, setAiFeatures] = useState<any>(null);
   const [refreshingAi, setRefreshingAi] = useState(false);
   const dispatch = useDispatch();
@@ -172,6 +173,7 @@ export default function ProfileScreen() {
               <Text style={styles.statVal}>Lvl {profileData?.level ?? user?.level ?? 1}</Text>
               <Text style={styles.statLbl}>Learner Level</Text>
             </View>
+          </View>
         </Card>
 
         {/* AI Learner DNA & Insights Card */}
@@ -562,7 +564,8 @@ const styles = StyleSheet.create({
     borderColor: colors.purple,
   },
   refreshBtnText: {
-    ...typography.captionBold,
+    ...typography.caption,
+    fontWeight: '700',
     color: colors.purple,
   },
   aiSub: {
