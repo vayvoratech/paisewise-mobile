@@ -196,15 +196,15 @@ export default function ProfileScreen() {
 
           <View style={styles.aiGrid}>
             <View style={styles.aiMetricBox}>
-              <Text style={styles.aiMetricVal}>🎯 {aiFeatures?.features?.quiz_avg_score ?? 69.05}%</Text>
+              <Text style={styles.aiMetricVal}>🎯 {aiFeatures?.features?.quiz_avg_score ?? 0}%</Text>
               <Text style={styles.aiMetricLbl}>Quiz Avg Score</Text>
             </View>
             <View style={styles.aiMetricBox}>
-              <Text style={styles.aiMetricVal}>📈 {Math.round((aiFeatures?.features?.paper_trade_profit_rate ?? 0.69) * 100)}% Win</Text>
-              <Text style={styles.aiMetricLbl}>Paper Trade ({aiFeatures?.features?.paper_trade_count ?? 81} Trades)</Text>
+              <Text style={styles.aiMetricVal}>📈 {Math.round((aiFeatures?.features?.paper_trade_profit_rate ?? 0) * 100)}% Win</Text>
+              <Text style={styles.aiMetricLbl}>Paper Trade ({aiFeatures?.features?.paper_trade_count ?? 0} Trades)</Text>
             </View>
             <View style={styles.aiMetricBox}>
-              <Text style={styles.aiMetricVal}>🛡️ {aiFeatures?.features?.risk_profile ?? 'Moderate'}</Text>
+              <Text style={styles.aiMetricVal}>🛡️ {aiFeatures?.features?.risk_profile ?? 'Conservative'}</Text>
               <Text style={styles.aiMetricLbl}>AI Risk Rating</Text>
             </View>
             <View style={styles.aiMetricBox}>
@@ -212,12 +212,12 @@ export default function ProfileScreen() {
               <Text style={styles.aiMetricLbl}>Peak Active Time</Text>
             </View>
             <View style={styles.aiMetricBox}>
-              <Text style={styles.aiMetricVal}>⏱️ {Math.round((aiFeatures?.features?.session_duration ?? 4047) / 60)} Mins</Text>
+              <Text style={styles.aiMetricVal}>⏱️ {aiFeatures?.features?.session_duration ?? 0} Mins</Text>
               <Text style={styles.aiMetricLbl}>Engagement</Text>
             </View>
             <View style={styles.aiMetricBox}>
-              <Text style={styles.aiMetricVal}>📚 {aiFeatures?.features?.lessons_started ?? 119} Lessons</Text>
-              <Text style={styles.aiMetricLbl}>Started ({Math.round((aiFeatures?.features?.lesson_completion_rate ?? 0.62) * 100)}% Pass)</Text>
+              <Text style={styles.aiMetricVal}>📚 {aiFeatures?.features?.lessons_started ?? 0} Lessons</Text>
+              <Text style={styles.aiMetricLbl}>Started ({Math.round((aiFeatures?.features?.lesson_completion_rate ?? 0) * 100)}% Pass)</Text>
             </View>
           </View>
         </Card>
