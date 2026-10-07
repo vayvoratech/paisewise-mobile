@@ -87,6 +87,8 @@ export default function QuizScreen({ navigation, route }: Props) {
     }
   };
 
+  const answersRef = useRef<string[]>([]);
+
   const answered = picked !== null;
 
   const onPick = (key: string) => {
@@ -100,7 +102,8 @@ export default function QuizScreen({ navigation, route }: Props) {
       newScore = score + 1;
       setScore(newScore);
     }
-    setUserAnswers(prev => [...prev, key]);
+    answersRef.current.push(key);
+    setUserAnswers([...answersRef.current]);
   };
 
   const next = () => {
@@ -118,16 +121,16 @@ export default function QuizScreen({ navigation, route }: Props) {
     const earned = isPassed ? 50 : 0;
     setXpEarned(earned);
 
-    if (isPassed) {
-      try {
-        await learnApi.submitQuiz(lessonId, userAnswers, 30);
-      } catch (e) {
-        // Fallback local update
-      }
+    try {
+      const finalAnswers = answersRef.current.length > 0 ? answersRef.current : userAnswers;
+      await learnApi.submitQuiz(lessonId, finalAnswers, 30);
+    } catch (e) {
+      // Fallback local update
     }
   };
 
   const restartQuiz = () => {
+    answersRef.current = [];
     setIndex(0);
     setScore(0);
     setPicked(null);
