@@ -47,6 +47,7 @@ export const API_ENDPOINTS = {
     BUY: `${BASE_URL}/portfolio/buy`,
     HOLDINGS: `${BASE_URL}/portfolio/me/holdings`,
     AI_INSIGHT: `${BASE_URL}/portfolio/ai-insight`,
+    AI_FUND_RECOMMEND: `${BASE_URL}/portfolio/ai/fund-recommend`,
     PNL_REPORT: `${BASE_URL}/portfolio/pnl-report`,
     INSIGHTS: `${BASE_URL}/portfolio/insights`,
   },

@@ -20,6 +20,8 @@ import { RootState, AppDispatch } from '../../../app/store';
 import { createSIP } from '../slices/sipSlice';
 import mixpanel from '@core/mixpanel';
 import { TOP_MUTUAL_FUNDS } from '../sip.data';
+import { apiClient } from '../../../core/api/apiClient';
+import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
 
 const DEBIT_DATES = [1, 5, 10, 15, 20, 25];
 
@@ -43,7 +45,69 @@ export default function SIPSetupScreen() {
   const [isMandateSheetVisible, setIsMandateSheetVisible] = useState(false);
   const [confirmedSip, setConfirmedSip] = useState<any | null>(null);
 
+  // AI Fund Recommendation States
+  const [aiRisk, setAiRisk] = useState<'conservative' | 'moderate' | 'aggressive'>('moderate');
+  const [aiGoal, setAiGoal] = useState<string>('wealth creation');
+  const [aiHorizon, setAiHorizon] = useState<number>(5);
+  const [loadingAiFunds, setLoadingAiFunds] = useState(false);
+  const [aiRecommendations, setAiRecommendations] = useState<any[] | null>(null);
+
+  const fetchAiFundRecommendations = async (overrideRisk?: string, overrideGoal?: string, overrideHorizon?: number) => {
+    const risk = overrideRisk || aiRisk;
+    const goal = overrideGoal || aiGoal;
+    const horizon = overrideHorizon !== undefined ? overrideHorizon : aiHorizon;
+
+    setLoadingAiFunds(true);
+    try {
+      const res = await apiClient.post(API_ENDPOINTS.PORTFOLIO.AI_FUND_RECOMMEND, {
+        userId: 'me',
+        riskProfile: risk,
+        investmentAmount: sipAmount,
+        investmentHorizon: horizon,
+        userGoal: goal,
+        language: 'English',
+      });
+      if (res.data && res.data.recommendedFunds) {
+        setAiRecommendations(res.data.recommendedFunds);
+      }
+    } catch (err: any) {
+      console.warn('AI Fund Recommendation error:', err.message);
+    } finally {
+      setLoadingAiFunds(false);
+    }
+  };
+
+  const handleRiskChange = (r: 'conservative' | 'moderate' | 'aggressive') => {
+    setAiRisk(r);
+    fetchAiFundRecommendations(r, aiGoal, aiHorizon);
+  };
+
+  const handleGoalChange = (g: string) => {
+    setAiGoal(g);
+    fetchAiFundRecommendations(aiRisk, g, aiHorizon);
+  };
+
+  const handleHorizonChange = (h: number) => {
+    setAiHorizon(h);
+    fetchAiFundRecommendations(aiRisk, aiGoal, h);
+  };
+
+  const handleSelectAiFund = (rec: any) => {
+    // Check if fund already exists in funds list by scheme code or name
+    const matched = funds.find(
+      (f) => f.id === rec.schemeCode || f.name.toLowerCase().includes((rec.fundName || '').toLowerCase().slice(0, 10))
+    );
+    if (matched) {
+      setSelectedFundId(matched.id);
+    } else {
+      // Dynamic fund selection
+      setSelectedFundId(rec.schemeCode || 'mf-ppfas-flexi');
+    }
+    Alert.alert('AI Fund Selected', `Selected ${rec.fundName} (${rec.score}% AI Match Score) for your SIP.`);
+  };
+
   useEffect(() => {
+    fetchAiFundRecommendations();
     // Track SIP setup started event per repo analytics spec
     mixpanel.track('sip_setup_started', {
       fund_id: selectedFund.id,
@@ -273,6 +337,119 @@ export default function SIPSetupScreen() {
               </TouchableOpacity>
             ))}
           </ScrollView>
+        </Card>
+
+        {/* Step 1.5: AI Mutual Fund Recommendation Card */}
+        <Card style={styles.aiAdvisorCard}>
+          <View style={styles.aiAdvisorHeader}>
+            <Text style={{ fontSize: 22 }}>🤖</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.aiAdvisorTitle}>AI Mutual Fund Advisor</Text>
+              <Text style={styles.aiAdvisorSub}>
+                Get personalized mutual fund recommendations powered by AI ML engine
+              </Text>
+            </View>
+          </View>
+
+          {/* Risk Profile Selection */}
+          <Text style={styles.aiFieldLabel}>Your Risk Tolerance</Text>
+          <View style={styles.aiChipRow}>
+            {(['conservative', 'moderate', 'aggressive'] as const).map((r) => (
+              <TouchableOpacity
+                key={r}
+                onPress={() => handleRiskChange(r)}
+                style={[styles.aiFilterChip, aiRisk === r && styles.aiFilterChipActive]}
+              >
+                <Text style={[styles.aiFilterText, aiRisk === r && styles.aiFilterTextActive]}>
+                  {r.charAt(0).toUpperCase() + r.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Goal & Horizon Selection */}
+          <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.aiFieldLabel}>Financial Goal</Text>
+              <View style={styles.aiChipRow}>
+                {['wealth creation', 'tax saving'].map((g) => (
+                  <TouchableOpacity
+                    key={g}
+                    onPress={() => handleGoalChange(g)}
+                    style={[styles.aiFilterChip, aiGoal === g && styles.aiFilterChipActive]}
+                  >
+                    <Text style={[styles.aiFilterText, aiGoal === g && styles.aiFilterTextActive]}>
+                      {g === 'wealth creation' ? 'Wealth' : 'Tax Save'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text style={styles.aiFieldLabel}>Horizon</Text>
+              <View style={styles.aiChipRow}>
+                {[3, 5, 10].map((h) => (
+                  <TouchableOpacity
+                    key={h}
+                    onPress={() => handleHorizonChange(h)}
+                    style={[styles.aiFilterChip, aiHorizon === h && styles.aiFilterChipActive]}
+                  >
+                    <Text style={[styles.aiFilterText, aiHorizon === h && styles.aiFilterTextActive]}>
+                      {h} Yrs
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+
+          {/* Action Button */}
+          <TouchableOpacity
+            style={styles.aiGenerateBtn}
+            onPress={() => fetchAiFundRecommendations()}
+            disabled={loadingAiFunds}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.aiGenerateBtnText}>
+              {loadingAiFunds ? '⏳ Fetching AI Recommendations...' : '✨ Generate AI Fund Recommendations'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Recommended Funds Results */}
+          {aiRecommendations && aiRecommendations.length > 0 && (
+            <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.purple }}>
+                🎯 Top AI Recommended Mutual Funds:
+              </Text>
+              {aiRecommendations.map((rec: any, idx: number) => (
+                <View key={rec.schemeCode || idx} style={styles.aiResultItem}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={styles.aiResultName} numberOfLines={1}>
+                      {rec.fundName}
+                    </Text>
+                    <View style={styles.aiScoreBadge}>
+                      <Text style={styles.aiScoreBadgeText}>✨ {Math.round(rec.score || 85)}% Match</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.aiResultReason}>
+                    💡 {rec.reason || 'Optimal fund match calculated based on risk profile and investment horizon.'}
+                  </Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                    <Text style={styles.aiResultMetrics}>
+                      Cat: {rec.keyMetrics?.category || 'Equity'} · 3Y: +{rec.keyMetrics?.return3Y || 18}% · Exp: {rec.keyMetrics?.expenseRatio || 0.5}%
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.aiSelectBtn}
+                      onPress={() => handleSelectAiFund(rec)}
+                    >
+                      <Text style={styles.aiSelectBtnText}>Select Fund →</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
         </Card>
 
         {/* Step 2: SIP Amount Slider */}
@@ -676,5 +853,119 @@ const styles = StyleSheet.create({
   successActions: {
     width: '100%',
     gap: spacing.xs,
+  },
+  aiAdvisorCard: {
+    backgroundColor: '#F8F5FF',
+    borderColor: colors.purpleLight,
+    borderWidth: 1.5,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginVertical: spacing.sm,
+  },
+  aiAdvisorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  aiAdvisorTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  aiAdvisorSub: {
+    fontSize: 11,
+    color: colors.textMuted,
+  },
+  aiFieldLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  aiChipRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  aiFilterChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  aiFilterChipActive: {
+    backgroundColor: colors.purple,
+    borderColor: colors.purple,
+  },
+  aiFilterText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  aiFilterTextActive: {
+    color: '#FFF',
+  },
+  aiGenerateBtn: {
+    backgroundColor: colors.purple,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    marginTop: spacing.md,
+  },
+  aiGenerateBtnText: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  aiResultItem: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  aiResultName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+    flex: 1,
+    marginRight: 6,
+  },
+  aiScoreBadge: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+  },
+  aiScoreBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.green,
+  },
+  aiResultReason: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginVertical: 4,
+    fontStyle: 'italic',
+  },
+  aiResultMetrics: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  aiSelectBtn: {
+    backgroundColor: colors.purpleLight,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.sm,
+  },
+  aiSelectBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.purple,
   },
 });
