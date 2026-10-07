@@ -127,8 +127,15 @@ export const loginUser = createAsyncThunk(
 
       return { user, accessToken, refreshToken };
     } catch (err: any) {
-      if (err.message === 'Network Error' || err.code === 'ERR_NETWORK' || !err.response || err.response?.status === 404) {
-        const demoSession = createDemoSession(payload?.email, payload?.name, payload?.phone);
+      const isNetworkError =
+        !err.response ||
+        err.message === 'Network Error' ||
+        err.code === 'ERR_NETWORK' ||
+        err.response?.status === 404 ||
+        (err.message && err.message.includes('Network Error'));
+
+      if (isNetworkError) {
+        const demoSession = createDemoSession(payload?.identifier || payload?.email, payload?.name, payload?.phone);
         if (demoSession) {
           return demoSession;
         }
@@ -161,8 +168,14 @@ export const loginUserMpin = createAsyncThunk(
       }
       return { user, accessToken, refreshToken };
     } catch (err: any) {
-      if (err.message === 'Network Error' || err.code === 'ERR_NETWORK' || !err.response || err.response?.status === 404) {
-        const demoSession = createDemoSession(undefined, 'Demo Investor', payload.phone);
+      const isNetworkError =
+        !err.response ||
+        err.message === 'Network Error' ||
+        err.code === 'ERR_NETWORK' ||
+        err.response?.status === 404;
+
+      if (isNetworkError) {
+        const demoSession = createDemoSession(undefined, 'Amrut Patil', payload.phone);
         if (demoSession) {
           return demoSession;
         }
@@ -220,7 +233,14 @@ export const registerUser = createAsyncThunk(
       }
       return { user, accessToken, refreshToken };
     } catch (err: any) {
-      if (err.message === 'Network Error' || err.code === 'ERR_NETWORK' || !err.response || err.response?.status === 404) {
+      const isNetworkError =
+        !err.response ||
+        err.message === 'Network Error' ||
+        err.code === 'ERR_NETWORK' ||
+        err.response?.status === 404 ||
+        (err.message && err.message.includes('Network Error'));
+
+      if (isNetworkError) {
         const demoSession = createDemoSession(payload?.email, payload?.name, payload?.phone);
         if (demoSession) {
           return demoSession;

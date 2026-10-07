@@ -1,6 +1,3 @@
-/** Screen 06 — Buy / Sell Modal (bottom sheet). Order placement for Practice & Real Mode.
- *  Supports Gated KYC checks, Orange REAL MONEY warning badge, and MPIN confirmation.
- */
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -72,6 +69,7 @@ export default function BuySellScreen({ navigation, route }: Props) {
         totalPaid: receipt.totalPaid || Math.round((receipt.price || safePrice) * (receipt.shares || receipt.quantity || 1)),
         xpEarned: receipt.xpEarned || 25,
         mode: isBuyMode ? 'buy' : 'sell',
+        isReal: receipt.isReal ?? (tradingMode === 'REAL'),
       });
     } catch {
       navigation.popToTop();

@@ -79,6 +79,12 @@ export default function LearnScreen({ navigation }: Props) {
   };
 
   const fetchLearningData = useCallback(() => {
+    // 0ms instant optimistic state update for completed lessons
+    const localIds = learnApi.getLocalCompletedLessonIds();
+    if (localIds.length > 0) {
+      setCompletedLessonIds(prev => Array.from(new Set([...prev, ...localIds])));
+    }
+
     // 1. Fetch lessons from PostgreSQL DB via learnApi
     learnApi.getLessons()
       .then(lessons => {

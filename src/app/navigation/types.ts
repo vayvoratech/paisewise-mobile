@@ -58,4 +58,9 @@ export type RootStackParamList = {
   SymbolSearch: undefined;
   MutualFunds: { category?: 'all' | 'large' | 'mid' | 'debt' } | undefined;
   FundDetail: { fundId?: string; fundName?: string } | undefined;
+  SIPCalculator: { initialAmount?: number; initialYears?: number; initialRate?: number } | undefined;
+  SIPSetup: { fundId?: string; defaultAmount?: number; goalId?: string; entrySource?: string } | undefined;
+  Goals: undefined;
+  MFPortfolio: undefined;
+  TaxReport: { financialYear?: string } | undefined;
 };

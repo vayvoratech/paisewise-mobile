@@ -26,10 +26,14 @@ export default function ProfileScreen() {
 
   const WORKING_LANGUAGES = [
     { code: 'en', name: 'English', native: 'English', flag: '🇬🇧' },
-    { code: 'te', name: 'Telugu', native: 'తెలుగు', flag: '🇮🇳' },
     { code: 'hi', name: 'Hindi', native: 'हिन्दी', flag: '🇮🇳' },
+    { code: 'te', name: 'Telugu', native: 'తెలుగు', flag: '🇮🇳' },
+    { code: 'ta', name: 'Tamil', native: 'தமிழ்', flag: '🇮🇳' },
     { code: 'bn', name: 'Bengali', native: 'বাংলা', flag: '🇮🇳' },
     { code: 'gu', name: 'Gujarati', native: 'ગુજરાતી', flag: '🇮🇳' },
+    { code: 'mr', name: 'Marathi', native: 'मराठी', flag: '🇮🇳' },
+    { code: 'kn', name: 'Kannada', native: 'ಕನ್ನಡ', flag: '🇮🇳' },
+    { code: 'ml', name: 'Malayalam', native: 'മലയാളം', flag: '🇮🇳' },
   ];
 
   const handleSelectLanguage = async (lang: { code: string; name: string }) => {

@@ -38,6 +38,15 @@ import StockDetailScreen from '../../features/market/screens/StockDetailScreen';
 import MutualFundsScreen from '../../features/mutualfunds/screens/MutualFundsScreen';
 import FundDetailScreen from '../../features/mutualfunds/screens/FundDetailScreen';
 
+// Import SIP & Goals screens
+import SIPCalculatorScreen from '../../features/sip/screens/SIPCalculatorScreen';
+import SIPSetupScreen from '../../features/sip/screens/SIPSetupScreen';
+import GoalsScreen from '../../features/sip/screens/GoalsScreen';
+
+// Import Mutual Funds & Tax screens
+import MFPortfolioScreen from '../../features/portfolio/screens/MFPortfolioScreen';
+import TaxReportScreen from '../../features/portfolio/screens/TaxReportScreen';
+
 // Import Portfolio & Order screens
 import OrdersScreen from '../../features/portfolio/screens/OrdersScreen';
 import OrderDetailScreen from '../../features/portfolio/screens/OrderDetailScreen';
@@ -145,6 +154,15 @@ export default function RootNavigator() {
         <Stack.Screen name="Orders" component={OrdersScreen} />
         <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
         <Stack.Screen name="TradeHistory" component={TradeHistoryScreen} />
+
+        {/* SIP & Goal Tracking screens */}
+        <Stack.Screen name="SIPCalculator" component={SIPCalculatorScreen as any} />
+        <Stack.Screen name="SIPSetup" component={SIPSetupScreen as any} />
+        <Stack.Screen name="Goals" component={GoalsScreen as any} />
+
+        {/* Mutual Funds Portfolio & Tax Report screens */}
+        <Stack.Screen name="MFPortfolio" component={MFPortfolioScreen as any} />
+        <Stack.Screen name="TaxReport" component={TaxReportScreen as any} />
 
         {/* Transparent modal sheets */}
         <Stack.Group screenOptions={{ presentation: 'transparentModal', animation: 'slide_from_bottom' }}>

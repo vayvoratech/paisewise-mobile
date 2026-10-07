@@ -129,11 +129,24 @@ const portfolioSlice = createSlice({
       })
       .addCase(fetchPortfolioSummary.fulfilled, (state, action: PayloadAction<any>) => {
         state.loading = false;
-        state.cash = action.payload.cash;
-        state.holdings = action.payload.holdings;
-        state.xp = action.payload.xp;
-        state.invested = state.holdings.reduce((sum, h) => sum + h.avgPrice * h.shares, 0);
-        state.holdingsValue = state.holdings.reduce((sum, h) => sum + h.currentPrice * h.shares, 0);
+        if (action.payload) {
+          if (typeof action.payload.cash === 'number') state.cash = action.payload.cash;
+          if (typeof action.payload.xp === 'number') state.xp = action.payload.xp;
+
+          if (Array.isArray(action.payload.holdings)) {
+            state.holdings = action.payload.holdings.map((h: any) => ({
+              symbol: h.symbol,
+              name: h.name || h.symbol,
+              emoji: h.emoji || '📊',
+              shares: Number(h.shares ?? h.quantity ?? 1),
+              avgPrice: Number(h.avgPrice ?? h.avgCost ?? 0),
+              currentPrice: Number(h.currentPrice ?? h.avgPrice ?? h.avgCost ?? 0),
+              note: h.note || `Practice position active for ${h.symbol}.`,
+            }));
+          }
+          state.invested = state.holdings.reduce((sum, h) => sum + (h.avgPrice * h.shares), 0);
+          state.holdingsValue = state.holdings.reduce((sum, h) => sum + (h.currentPrice * h.shares), 0);
+        }
       })
       .addCase(fetchPortfolioSummary.rejected, (state, action) => {
         state.loading = false;

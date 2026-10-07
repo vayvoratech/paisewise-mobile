@@ -1,30 +1,38 @@
 /** Screen 08 — Portfolio. Plain-English P&L, "Why changed?", holdings, Orders & Trade History. */
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform, Alert } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import axios from 'axios';
+import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
 import { Card } from '../../../shared/ui/Card';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { formatINR, formatPct } from '../../../shared/format';
 import { useSelector, useDispatch } from 'react-redux';
-import type { RootState, AppDispatch } from '../../../app/store';
-import { resetPortfolio } from '../slices/portfolioSlice';
-import mixpanel from '@core/mixpanel';
 import { useNavigation } from '@react-navigation/native';
+import type { RootState, AppDispatch } from '../../../app/store';
+import { resetPortfolio, fetchPortfolioSummary } from '../slices/portfolioSlice';
+import mixpanel from '@core/mixpanel';
 
 const TABS = ['HOLDINGS', 'MUT. FUNDS', 'P&L REPORT'] as const;
 
 type Tab = (typeof TABS)[number];
+type Lang = 'en' | 'hi' | 'te';
 
 export default function PortfolioScreen() {
   const navigation = useNavigation<any>();
   const dispatch = useDispatch<AppDispatch>();
+  const token = useSelector((state: RootState) => (state.auth as any).accessToken);
+  const preferredLanguage = useSelector((state: RootState) => (state.auth as any).language || 'English');
   const holdings = useSelector((state: RootState) => state.portfolio.holdings);
   const holdingsValue = useSelector((state: RootState) => state.portfolio.holdingsValue);
+  const mfHoldings = useSelector((state: RootState) => state.mfPortfolio.holdings);
   const cash = useSelector((state: RootState) => state.portfolio.cash);
   const realOrders = useSelector((state: RootState) => state.order.realOrders);
 
   const starting = 100_000;
   const [tab, setTab] = useState<Tab>('HOLDINGS');
+  const [aiInsight, setAiInsight] = useState<string | null>(null);
+  const [loadingAi, setLoadingAi] = useState<boolean>(false);
   const totalValue = cash + holdingsValue;
   const gain = totalValue - starting;
   const gainPct = (gain / starting) * 100;
@@ -34,13 +42,15 @@ export default function PortfolioScreen() {
   ).length;
 
   useEffect(() => {
+    dispatch(fetchPortfolioSummary());
+
     mixpanel.track('portfolio_viewed', {
       holdings_count: holdings.length,
       total_invested: starting,
       current_value: totalValue,
       total_pnl: gain,
       total_pnl_pct: gainPct,
-      has_mf_holdings: false,
+      has_mf_holdings: mfHoldings.length > 0,
       has_stock_holdings: holdings.length > 0,
     });
 
@@ -50,6 +60,31 @@ export default function PortfolioScreen() {
       insight_category: 'market_movement',
     });
   }, []);
+
+  const handleFetchAiInsight = async () => {
+    setLoadingAi(true);
+    setAiInsight(null);
+    mixpanel.track('ai_insight_requested', { language: preferredLanguage });
+
+    try {
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.post(
+        API_ENDPOINTS.PORTFOLIO.AI_INSIGHT,
+        { language: preferredLanguage },
+        { headers }
+      );
+      if (res.data && res.data.insight) {
+        setAiInsight(res.data.insight);
+      } else {
+        setAiInsight('Unable to generate AI insight at this time. Please try again.');
+      }
+    } catch (err: any) {
+      console.warn('AI Insight Error:', err.message);
+      setAiInsight('AI service is taking longer than expected. Please tap refresh to try again.');
+    } finally {
+      setLoadingAi(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
@@ -94,12 +129,46 @@ export default function PortfolioScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Why insight */}
+          {/* Interactive AI Portfolio Insight Card */}
           <View style={styles.insight}>
-            <Text style={styles.insightIcon}>💡</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.insightTitle}>Why is portfolio up today?</Text>
-              <Text style={styles.insightText}>Reliance rose 1.2% — RBI kept interest rates unchanged. Good news for big companies!</Text>
+            <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' }}>
+              <Text style={styles.insightIcon}>🤖</Text>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={styles.insightTitle}>AI Portfolio Insight</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#92722A', opacity: 0.8 }}>
+                    🌐 {preferredLanguage}
+                  </Text>
+                </View>
+
+                {loadingAi ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 }}>
+                    <ActivityIndicator size="small" color="#92722A" />
+                    <Text style={styles.insightText}>✨ Fetching AI insight in {preferredLanguage}...</Text>
+                  </View>
+                ) : aiInsight ? (
+                  <View style={{ marginTop: 8 }}>
+                    <Text style={styles.insightText}>{aiInsight}</Text>
+                    <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+                      <TouchableOpacity style={styles.fetchAiBtn} onPress={handleFetchAiInsight}>
+                        <Text style={styles.fetchAiBtnText}>🔄 Refresh AI Insight</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.hideBtn} onPress={() => setAiInsight(null)}>
+                        <Text style={styles.hideBtnText}>✕ Close</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={{ marginTop: 4 }}>
+                    <Text style={styles.insightText}>
+                      Get an instant AI explanation of your stock holdings & market trend in {preferredLanguage}.
+                    </Text>
+                    <TouchableOpacity style={[styles.fetchAiBtn, { marginTop: 12, alignSelf: 'flex-start' }]} onPress={handleFetchAiInsight}>
+                      <Text style={styles.fetchAiBtnText}>✨ View AI Portfolio Insight</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
 
@@ -163,21 +232,92 @@ export default function PortfolioScreen() {
             })}
 
           {tab === 'MUT. FUNDS' && (
-            <Card style={{ marginTop: spacing.md, alignItems: 'center', paddingVertical: spacing.xl, paddingHorizontal: spacing.lg }}>
-              <Text style={{ fontSize: 36, marginBottom: spacing.sm }}>🌱</Text>
-              <Text style={{ ...typography.h3, color: colors.text, textAlign: 'center' }}>No Active Mutual Fund SIPs</Text>
-              <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: 4, marginBottom: spacing.lg }}>
-                Explore top Large Cap, Mid Cap & Debt mutual funds curated by PaiseWise AI.
-              </Text>
-              <TouchableOpacity
-                style={{ backgroundColor: colors.purple, paddingHorizontal: spacing.xl, paddingVertical: 12, borderRadius: radius.md }}
-                onPress={() => navigation.navigate('MutualFunds')}
-              >
-                <Text style={{ ...typography.bodyBold, color: colors.white }}>Explore Mutual Funds 🚀</Text>
-              </TouchableOpacity>
-            </Card>
+            <View style={{ gap: spacing.md }}>
+              <Card style={{ backgroundColor: '#1E1B4B', padding: spacing.lg, borderRadius: radius.lg }}>
+                <Text style={{ ...typography.overline, color: 'rgba(255,255,255,0.7)' }}>MUTUAL FUNDS VALUATION</Text>
+                <Text style={{ ...typography.hero, color: colors.white, marginTop: 4 }}>
+                  {formatINR(mfHoldings.reduce((sum, h) => sum + h.currentValue, 0))}
+                </Text>
+                <Text style={{ ...typography.caption, color: colors.greenBright, marginTop: 2 }}>
+                  +{formatINR(mfHoldings.reduce((sum, h) => sum + h.totalReturns, 0))} overall returns
+                </Text>
+                <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md }}>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('MFPortfolio')}
+                    style={{ flex: 1, backgroundColor: colors.purple, paddingVertical: spacing.sm, borderRadius: radius.md, alignItems: 'center' }}
+                  >
+                    <Text style={{ color: colors.white, fontWeight: '700', fontSize: 13 }}>Open MF Portfolio</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('SIPSetup')}
+                    style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.15)', paddingVertical: spacing.sm, borderRadius: radius.md, alignItems: 'center' }}
+                  >
+                    <Text style={{ color: colors.white, fontWeight: '700', fontSize: 13 }}>+ Start SIP</Text>
+                  </TouchableOpacity>
+                </View>
+              </Card>
+
+              {mfHoldings.length === 0 ? (
+                <Card style={{ marginTop: spacing.sm, alignItems: 'center', paddingVertical: spacing.xl, paddingHorizontal: spacing.lg }}>
+                  <Text style={{ fontSize: 36, marginBottom: spacing.sm }}>🌱</Text>
+                  <Text style={{ ...typography.h3, color: colors.text, textAlign: 'center' }}>No Active Mutual Fund SIPs</Text>
+                  <Text style={{ ...typography.caption, color: colors.textMuted, textAlign: 'center', marginTop: 4, marginBottom: spacing.lg }}>
+                    Explore top Large Cap, Mid Cap & Debt mutual funds curated by PaiseWise AI.
+                  </Text>
+                  <TouchableOpacity
+                    style={{ backgroundColor: colors.purple, paddingHorizontal: spacing.xl, paddingVertical: 12, borderRadius: radius.md }}
+                    onPress={() => navigation.navigate('MutualFunds')}
+                  >
+                    <Text style={{ ...typography.bodyBold, color: colors.white }}>Explore Mutual Funds 🚀</Text>
+                  </TouchableOpacity>
+                </Card>
+              ) : (
+                mfHoldings.slice(0, 3).map((h) => (
+                  <TouchableOpacity key={h.id} onPress={() => navigation.navigate('MFPortfolio')}>
+                    <Card style={styles.holding}>
+                      <View style={styles.holdingHead}>
+                        <View style={[styles.holdingIcon, { backgroundColor: '#F3E8FF' }]}>
+                          <Text style={{ fontSize: 20 }}>📊</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.holdingSym} numberOfLines={1}>{h.fundName}</Text>
+                          <Text style={styles.holdingMeta}>{h.units.toFixed(2)} units · NAV {formatINR(h.currentNav)}</Text>
+                        </View>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={styles.holdingValue}>{formatINR(h.currentValue)}</Text>
+                          <Text style={[styles.holdingChange, { color: colors.green }]}>+{h.xirr}% XIRR</Text>
+                        </View>
+                      </View>
+                    </Card>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
           )}
-          {tab === 'P&L REPORT' && <Empty text={`Net practice P&L: ${formatINR(gain)} (${formatPct(gainPct)})`} />}
+
+          {tab === 'P&L REPORT' && (
+            <View style={{ gap: spacing.md }}>
+              <Card style={{ padding: spacing.lg }}>
+                <Text style={{ ...typography.h3, color: colors.text }}>Capital Gains & Tax Estimator</Text>
+                <Text style={{ ...typography.body, color: colors.textMuted, marginTop: 4, fontSize: 13 }}>
+                  View LTCG (Section 112A), STCG (Section 111A), ELSS 80C benefits, and download official PDF tax statement.
+                </Text>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('TaxReport')}
+                  style={{ backgroundColor: colors.purple, paddingVertical: spacing.md, borderRadius: radius.md, alignItems: 'center', marginTop: spacing.md }}
+                >
+                  <Text style={{ color: colors.white, fontWeight: '700', fontSize: 14 }}>🧾 View Capital Gains Tax Report</Text>
+                </TouchableOpacity>
+              </Card>
+
+              <Card style={{ padding: spacing.lg, backgroundColor: colors.surfaceMuted }}>
+                <Text style={{ ...typography.overline, color: colors.textMuted }}>NET PRACTICE PORTFOLIO P&L</Text>
+                <Text style={{ ...typography.h2, color: gain >= 0 ? colors.green : colors.pink, marginTop: 4 }}>
+                  {gain >= 0 ? '+' : ''}{formatINR(gain)} ({formatPct(gainPct)})
+                </Text>
+              </Card>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -253,10 +393,19 @@ const styles = StyleSheet.create({
     fontSize: 9,
     marginTop: 1,
   },
-  insight: { flexDirection: 'row', gap: spacing.md, backgroundColor: colors.yellowCard, borderRadius: radius.md, padding: spacing.lg },
-  insightIcon: { fontSize: 22 },
-  insightTitle: { ...typography.bodyBold, color: '#92722A' },
+  insight: { backgroundColor: colors.yellowCard, borderRadius: radius.md, padding: spacing.lg },
+  insightIcon: { fontSize: 24 },
+  insightTitle: { ...typography.bodyBold, color: '#92722A', fontSize: 16 },
   insightText: { ...typography.body, color: '#92722A', marginTop: spacing.xs, lineHeight: 22 },
+  langContainer: { flexDirection: 'row', gap: 4, backgroundColor: 'rgba(146, 114, 42, 0.12)', borderRadius: 12, padding: 2 },
+  langPill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  langPillActive: { backgroundColor: '#92722A' },
+  langPillText: { fontSize: 11, fontWeight: '700', color: '#92722A' },
+  langPillTextActive: { color: '#FFF' },
+  fetchAiBtn: { backgroundColor: '#92722A', borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 8 },
+  fetchAiBtnText: { color: '#FFF', fontWeight: '700', fontSize: 13 },
+  hideBtn: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#92722A', borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 8 },
+  hideBtnText: { color: '#92722A', fontWeight: '700', fontSize: 13 },
   tabsContainer: { flexDirection: 'row', justifyContent: 'space-around', borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: spacing.sm, marginTop: spacing.xs },
   tabItem: { paddingBottom: spacing.xs, position: 'relative' },
   tabText: { ...typography.overline, color: colors.textMuted },
