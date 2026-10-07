@@ -106,9 +106,10 @@ export default function LessonScreen({ navigation, route }: Props) {
   };
 
   const handleCompleteLesson = async () => {
+    // Optimistic UI update: change button state immediately with zero delay
+    setIsCompleted(true);
     try {
       await learnApi.completeLesson(lesson.id);
-      setIsCompleted(true);
       Alert.alert(
         "🎉 Lesson Completed!",
         "Great job! You earned +50 XP and extended your daily streak!",
@@ -118,7 +119,6 @@ export default function LessonScreen({ navigation, route }: Props) {
         ]
       );
     } catch (e) {
-      setIsCompleted(true);
       Alert.alert("Lesson Marked Complete!", "Great job finishing this lesson!");
     }
   };
