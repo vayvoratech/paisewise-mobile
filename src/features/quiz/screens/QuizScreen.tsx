@@ -88,6 +88,7 @@ export default function QuizScreen({ navigation, route }: Props) {
   };
 
   const answersRef = useRef<string[]>([]);
+  const scoreRef = useRef<number>(0);
 
   const answered = picked !== null;
 
@@ -97,10 +98,9 @@ export default function QuizScreen({ navigation, route }: Props) {
     if (timerRef.current) clearInterval(timerRef.current);
 
     const isCorrect = q.options?.find((opt: any) => opt.key === key)?.correct ?? false;
-    let newScore = score;
     if (isCorrect) {
-      newScore = score + 1;
-      setScore(newScore);
+      scoreRef.current += 1;
+      setScore(scoreRef.current);
     }
     answersRef.current.push(key);
     setUserAnswers([...answersRef.current]);
@@ -110,14 +110,15 @@ export default function QuizScreen({ navigation, route }: Props) {
     if (index < questions.length - 1) {
       setIndex((i) => i + 1);
     } else {
-      finishQuiz(score);
+      finishQuiz(scoreRef.current);
     }
   };
 
   const finishQuiz = async (finalScore: number) => {
     setIsFinished(true);
-    const scorePct = (finalScore / (questions.length || 1)) * 100;
-    const isPassed = scorePct >= 70;
+    const calculatedScore = scoreRef.current;
+    const scorePct = Math.round((calculatedScore / (questions.length || 1)) * 100);
+    const isPassed = scorePct >= 60;
     const earned = isPassed ? 50 : 0;
     setXpEarned(earned);
 
@@ -131,6 +132,7 @@ export default function QuizScreen({ navigation, route }: Props) {
 
   const restartQuiz = () => {
     answersRef.current = [];
+    scoreRef.current = 0;
     setIndex(0);
     setScore(0);
     setPicked(null);
