@@ -56,5 +56,11 @@ export const API_ENDPOINTS = {
   },
   COMMUNITY: {
     POSTS: `${BASE_URL}/community/posts`,
+  },
+  PROFILE: {
+    ME: `${BASE_URL}/profile/me`,
+    SETTINGS: `${BASE_URL}/profile/me/settings`,
+    AI_FEATURES: (userId: string) => `${BASE_URL}/profile/ai-features/${userId}`,
+    REFRESH_AI_FEATURES: (userId: string) => `${BASE_URL}/profile/ai-features/refresh/${userId}`,
   }
 } as const;
