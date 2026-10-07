@@ -36,7 +36,7 @@ export default function SplashScreen({ navigation }: Props) {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 1000,
+        duration: 250,
         useNativeDriver: true,
       }),
       Animated.spring(scaleAnim, {
@@ -50,8 +50,8 @@ export default function SplashScreen({ navigation }: Props) {
 
   useEffect(() => {
     const initializeApp = async () => {
-      // Enforce a minimum 2-second display timer for branding & loading experience
-      const timerPromise = new Promise((resolve) => setTimeout(resolve, 2000));
+      // Instant startup - 0ms delay
+      const timerPromise = Promise.resolve();
 
       let sessionRestored = false;
       let savedPhone = '';

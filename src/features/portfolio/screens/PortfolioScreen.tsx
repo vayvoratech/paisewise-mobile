@@ -1,4 +1,4 @@
-/** Screen 08 — Portfolio. Plain-English P&L, "Why changed?", holdings. */
+/** Screen 08 — Portfolio. Plain-English P&L, "Why changed?", holdings, Orders & Trade History. */
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,9 +9,9 @@ import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '../../../app/store';
 import { resetPortfolio } from '../slices/portfolioSlice';
 import mixpanel from '@core/mixpanel';
+import { useNavigation } from '@react-navigation/native';
 
 const TABS = ['HOLDINGS', 'MUT. FUNDS', 'P&L REPORT'] as const;
-import { useNavigation } from '@react-navigation/native';
 
 type Tab = (typeof TABS)[number];
 
@@ -21,25 +21,29 @@ export default function PortfolioScreen() {
   const holdings = useSelector((state: RootState) => state.portfolio.holdings);
   const holdingsValue = useSelector((state: RootState) => state.portfolio.holdingsValue);
   const cash = useSelector((state: RootState) => state.portfolio.cash);
+  const realOrders = useSelector((state: RootState) => state.order.realOrders);
+
   const starting = 100_000;
   const [tab, setTab] = useState<Tab>('HOLDINGS');
   const totalValue = cash + holdingsValue;
   const gain = totalValue - starting;
   const gainPct = (gain / starting) * 100;
 
+  const openOrdersCount = realOrders.filter(
+    (o) => o.status === 'OPEN' || o.status === 'PENDING' || o.status === 'PARTIAL'
+  ).length;
+
   useEffect(() => {
-    // 1. Track portfolio viewed with exact Week 2 spec parameters
     mixpanel.track('portfolio_viewed', {
       holdings_count: holdings.length,
       total_invested: starting,
       current_value: totalValue,
       total_pnl: gain,
       total_pnl_pct: gainPct,
-      has_mf_holdings: false, // Update if your slice tracks mutual funds
+      has_mf_holdings: false,
       has_stock_holdings: holdings.length > 0,
     });
 
-    // 2. Track AI insight viewed since the insight card renders on mount
     mixpanel.track('ai_insight_viewed', {
       insight_scope: 'portfolio',
       holding_id: null,
@@ -54,6 +58,42 @@ export default function PortfolioScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.sheet}>
+          {/* Quick Action Navigation Buttons for Real Orders & Trade History */}
+          <View style={styles.quickActionsRow}>
+            <TouchableOpacity
+              style={styles.quickActionCard}
+              onPress={() => navigation.navigate('Orders')}
+            >
+              <View style={styles.quickActionIconWrap}>
+                <Text style={styles.quickActionEmoji}>📋</Text>
+                {openOrdersCount > 0 && (
+                  <View style={styles.badgeCount}>
+                    <Text style={styles.badgeCountText}>{openOrdersCount}</Text>
+                  </View>
+                )}
+              </View>
+              <View>
+                <Text style={styles.quickActionTitle}>Orders Book</Text>
+                <Text style={styles.quickActionDesc}>
+                  {openOrdersCount > 0 ? `${openOrdersCount} Active` : 'Open & History'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickActionCard}
+              onPress={() => navigation.navigate('TradeHistory')}
+            >
+              <View style={styles.quickActionIconWrap}>
+                <Text style={styles.quickActionEmoji}>📜</Text>
+              </View>
+              <View>
+                <Text style={styles.quickActionTitle}>Trade History</Text>
+                <Text style={styles.quickActionDesc}>CSV Export & P&L</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
           {/* Why insight */}
           <View style={styles.insight}>
             <Text style={styles.insightIcon}>💡</Text>
@@ -91,13 +131,13 @@ export default function PortfolioScreen() {
                   key={h.symbol}
                   activeOpacity={0.9}
                   onPress={() => {
-                    // Track holding tapped as per spec
                     mixpanel.track('holding_tapped', {
                       holding_id: h.symbol,
                       holding_type: 'stock',
                       symbol_or_fund_id: h.symbol,
                       source_position: index + 1,
                     });
+                    navigation.navigate('StockDetail', { symbol: h.symbol });
                   }}
                 >
                   <Card style={styles.holding}>
@@ -156,6 +196,63 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surfaceAlt },
   scrollContent: { paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: 120 },
   sheet: { gap: spacing.lg },
+  quickActionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  quickActionCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  quickActionIconWrap: {
+    position: 'relative',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surfaceMuted,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quickActionEmoji: {
+    fontSize: 18,
+  },
+  badgeCount: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#D97706',
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  badgeCountText: {
+    color: colors.white,
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  quickActionTitle: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  quickActionDesc: {
+    ...typography.overline,
+    color: colors.textMuted,
+    fontSize: 9,
+    marginTop: 1,
+  },
   insight: { flexDirection: 'row', gap: spacing.md, backgroundColor: colors.yellowCard, borderRadius: radius.md, padding: spacing.lg },
   insightIcon: { fontSize: 22 },
   insightTitle: { ...typography.bodyBold, color: '#92722A' },

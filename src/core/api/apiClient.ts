@@ -8,7 +8,7 @@ interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
 }
 
 export const apiClient: AxiosInstance = axios.create({
-  baseURL: process.env.EXPO_PUBLIC_API_BASE_URL || BASE_URL,
+  baseURL: BASE_URL,
   timeout: 15000, // 15s timeout
   headers: {
     'Content-Type': 'application/json',

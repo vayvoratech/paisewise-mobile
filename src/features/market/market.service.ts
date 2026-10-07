@@ -15,7 +15,7 @@ export const marketService = {
       const response = await axios.post(
         `${BASE_URL}/market/quotes`,
         ['NSE:RELIANCE', 'NSE:TCS', 'NSE:INFY', 'NSE:HDFCBANK', 'NSE:ICICIBANK'],
-        { headers, timeout: 2000 }
+        { headers, timeout: 10000 }
       );
       return response.data;
     } catch (error) {
@@ -30,7 +30,7 @@ export const marketService = {
       const response = await axios.get(`${BASE_URL}/market/quote`, {
         params: { symbol },
         headers,
-        timeout: 2000,
+        timeout: 10000,
       });
       return response.data;
     } catch (error) {
@@ -42,7 +42,7 @@ export const marketService = {
   async getMarketIndices(): Promise<IndexQuote[]> {
     try {
       const headers = await getHeaders();
-      const response = await axios.get(`${BASE_URL}/market/indices`, { headers, timeout: 2000 });
+      const response = await axios.get(`${BASE_URL}/market/indices`, { headers, timeout: 10000 });
       return response.data;
     } catch (error) {
       console.warn('Failed to fetch market indices from backend:', error);
@@ -53,7 +53,7 @@ export const marketService = {
   async getMarketStatus(): Promise<{ isMarketOpen: boolean; session: string; nextSessionTime: string } | undefined> {
     try {
       const headers = await getHeaders();
-      const response = await axios.get(`${BASE_URL}/market/status`, { headers, timeout: 2000 });
+      const response = await axios.get(`${BASE_URL}/market/status`, { headers, timeout: 10000 });
       return response.data;
     } catch (error) {
       console.warn('Failed to fetch market status from backend:', error);
@@ -64,7 +64,7 @@ export const marketService = {
   async getTopMovers(): Promise<{ gainers: Stock[]; losers: Stock[] } | undefined> {
     try {
       const headers = await getHeaders();
-      const response = await axios.get(`${BASE_URL}/market/top-movers`, { headers, timeout: 2000 });
+      const response = await axios.get(`${BASE_URL}/market/top-movers`, { headers, timeout: 10000 });
       return response.data;
     } catch (error) {
       console.warn('Failed to fetch top movers from backend:', error);

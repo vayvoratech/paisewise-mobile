@@ -3,24 +3,35 @@ import { Platform } from 'react-native';
 
 const getDevIp = () => {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return window.location.hostname;
+    return window.location.hostname || 'localhost';
   }
   const hostUri = Constants.expoConfig?.hostUri;
   if (hostUri) {
     return hostUri.split(':')[0];
   }
-  return 'localhost';
+  return '10.154.230.218';
 };
 
 const DEV_IP = getDevIp();
 
+const resolveBaseUrl = () => {
+  const envUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+  if (envUrl) {
+    if (Platform.OS !== 'web' && (envUrl.includes('localhost') || envUrl.includes('127.0.0.1'))) {
+      return envUrl.replace(/localhost|127\.0\.0\.1/, DEV_IP);
+    }
+    return envUrl;
+  }
+  return Platform.OS === 'web' ? 'http://localhost:8080' : `http://${DEV_IP}:8080`;
+};
+
 export const BASE_URL_LIST = [
+  'https://paisewise-backend.onrender.com',
   `http://${DEV_IP}:8080`,
-  'http://192.168.29.179:8080',
-  'https://paisewise-backend.onrender.com'
+  'http://localhost:8080',
 ];
 
-export const BASE_URL = `http://${DEV_IP}:8080`;
+export const BASE_URL = resolveBaseUrl();
 
 export const API_ENDPOINTS = {
   AUTH: {

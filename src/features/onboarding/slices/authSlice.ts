@@ -3,6 +3,7 @@ import axios from 'axios';
 import { authApi } from '../../../core/api/authApi';
 import { tokenStorage } from '../../../core/api/tokenStorage';
 import { API_ENDPOINTS, BASE_URL } from '../../../core/api/apiEndpoints';
+import { ENV } from '../../../core/config/env';
 import { tokenStore, credentialsStore } from '../../../core/security/secureStore';
 
 export interface UserProfile {
@@ -40,6 +41,10 @@ const initialState: AuthState = {
 };
 
 const createDemoSession = (email?: string, name?: string, phone?: string) => {
+  if (!ENV.useMocks) {
+    return null;
+  }
+
   const mockUser: UserProfile = {
     id: 'demo-user-1',
     name: name || (email ? email.split('@')[0] : 'Learner'),
@@ -52,9 +57,6 @@ const createDemoSession = (email?: string, name?: string, phone?: string) => {
   const mockAccessToken = 'demo_access_token_offline_preview';
   const mockRefreshToken = 'demo_refresh_token_offline_preview';
 
-  tokenStorage.setAccessToken(mockAccessToken);
-  tokenStorage.setRefreshToken(mockRefreshToken);
-  tokenStorage.setUserId(mockUser.id);
   tokenStore.setTokens(mockAccessToken, mockRefreshToken).catch(() => {});
   credentialsStore.saveCredentials(mockUser.phone!, mockUser.email).catch(() => {});
   credentialsStore.saveHasMpin(true).catch(() => {});
@@ -70,7 +72,7 @@ export const sendOtpThunk = createAsyncThunk(
       const data = await authApi.sendOtp(payload);
       return data;
     } catch (err: any) {
-      if (err.message === 'Network Error' || err.code === 'ERR_NETWORK' || !err.response) {
+      if (err.message === 'Network Error' || err.code === 'ERR_NETWORK' || !err.response || err.response?.status === 404) {
         return { message: 'OTP sent to mobile (Demo Mode)', expiresAt: '10 mins' };
       }
       const errMsg = err.response?.data?.message || err.message || 'Failed to send OTP';
@@ -87,8 +89,11 @@ export const verifyOtpThunk = createAsyncThunk(
       const data = await authApi.verifyOtp({ email: payload.identifier, otp: payload.otp });
       return data;
     } catch (err: any) {
-      if (err.message === 'Network Error' || err.code === 'ERR_NETWORK' || !err.response) {
-        return createDemoSession(payload.identifier);
+      if (err.message === 'Network Error' || err.code === 'ERR_NETWORK' || !err.response || err.response?.status === 404) {
+        const demoSession = createDemoSession(payload.identifier);
+        if (demoSession) {
+          return demoSession;
+        }
       }
       const errMsg = err.response?.data?.message || err.message || 'OTP verification failed';
       return rejectWithValue(errMsg);
@@ -122,10 +127,13 @@ export const loginUser = createAsyncThunk(
 
       return { user, accessToken, refreshToken };
     } catch (err: any) {
-      if (err.message === 'Network Error' || err.code === 'ERR_NETWORK' || !err.response) {
-        return createDemoSession(payload?.email, payload?.name, payload?.phone);
+      if (err.message === 'Network Error' || err.code === 'ERR_NETWORK' || !err.response || err.response?.status === 404) {
+        const demoSession = createDemoSession(payload?.email, payload?.name, payload?.phone);
+        if (demoSession) {
+          return demoSession;
+        }
       }
-      const errMsg = err.response?.data?.message || err.message || 'Login failed';
+      const errMsg = err.response?.data?.message || err.response?.data?.error || (err.response?.status === 404 ? 'Auth service is unavailable or starting up. Please try again.' : err.message) || 'Login failed';
       return rejectWithValue(errMsg);
     }
   }
@@ -136,7 +144,7 @@ export const loginUserMpin = createAsyncThunk(
   'auth/loginMpin',
   async (payload: { phone: string; mpin: string }, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${BASE_URL}/auth/login/mpin`, payload, { timeout: 2000 });
+      const response = await axios.post(`${BASE_URL}/auth/login/mpin`, payload, { timeout: 15000 });
       const { tokens, user } = response.data;
       const accessToken = tokens?.accessToken || response.data.accessToken;
       const refreshToken = tokens?.refreshToken || response.data.refreshToken;
@@ -153,8 +161,11 @@ export const loginUserMpin = createAsyncThunk(
       }
       return { user, accessToken, refreshToken };
     } catch (err: any) {
-      if (err.message === 'Network Error' || err.code === 'ERR_NETWORK' || !err.response) {
-        return createDemoSession(undefined, 'Demo Investor', payload.phone);
+      if (err.message === 'Network Error' || err.code === 'ERR_NETWORK' || !err.response || err.response?.status === 404) {
+        const demoSession = createDemoSession(undefined, 'Demo Investor', payload.phone);
+        if (demoSession) {
+          return demoSession;
+        }
       }
       const errMsg = err.response?.data?.code === 'ACCOUNT_LOCKED' 
         ? 'ACCOUNT_LOCKED'
@@ -169,13 +180,13 @@ export const configureMpin = createAsyncThunk(
   'auth/configureMpin',
   async (payload: { email: string; mpin: string }, { rejectWithValue }) => {
     try {
-      await axios.post(`${BASE_URL}/auth/set-mpin`, payload, { timeout: 2000 });
+      await axios.post(`${BASE_URL}/auth/set-mpin`, payload, { timeout: 15000 });
       const savedPhone = await credentialsStore.getPhone() || '';
       await credentialsStore.saveCredentials(savedPhone, payload.email, payload.mpin);
       await credentialsStore.saveHasMpin(true);
       return payload.mpin;
     } catch (err: any) {
-      if (err.message === 'Network Error' || err.code === 'ERR_NETWORK' || !err.response) {
+      if (err.message === 'Network Error' || err.code === 'ERR_NETWORK' || !err.response || err.response?.status === 404) {
         const savedPhone = (await credentialsStore.getPhone()) || '9876543210';
         await credentialsStore.saveCredentials(savedPhone, payload.email, payload.mpin);
         await credentialsStore.saveHasMpin(true);
@@ -192,7 +203,7 @@ export const registerUser = createAsyncThunk(
   'auth/register',
   async (payload: any, { rejectWithValue }) => {
     try {
-      const response = await axios.post(API_ENDPOINTS.AUTH.REGISTER, payload, { timeout: 2000 });
+      const response = await axios.post(API_ENDPOINTS.AUTH.REGISTER, payload, { timeout: 15000 });
       const { tokens, user } = response.data;
       const accessToken = tokens?.accessToken || response.data.accessToken;
       const refreshToken = tokens?.refreshToken || response.data.refreshToken;
@@ -209,10 +220,13 @@ export const registerUser = createAsyncThunk(
       }
       return { user, accessToken, refreshToken };
     } catch (err: any) {
-      if (err.message === 'Network Error' || err.code === 'ERR_NETWORK' || !err.response) {
-        return createDemoSession(payload?.email, payload?.name, payload?.phone);
+      if (err.message === 'Network Error' || err.code === 'ERR_NETWORK' || !err.response || err.response?.status === 404) {
+        const demoSession = createDemoSession(payload?.email, payload?.name, payload?.phone);
+        if (demoSession) {
+          return demoSession;
+        }
       }
-      const errMsg = err.response?.data?.message || err.message || 'Registration failed';
+      const errMsg = err.response?.data?.message || err.response?.data?.error || (err.response?.status === 404 ? 'Auth service is unavailable or starting up. Please try again.' : err.message) || 'Registration failed';
       return rejectWithValue(errMsg);
     }
   }
@@ -227,7 +241,10 @@ export const refreshTokenThunk = createAsyncThunk(
       const currentRefreshToken = state.auth.refreshToken || tokenStorage.getRefreshToken();
       
       if (!currentRefreshToken) {
-        return createDemoSession();
+        if (ENV.useMocks) {
+          return createDemoSession();
+        }
+        return rejectWithValue('No refresh token available');
       }
 
       const data = await authApi.refreshToken(currentRefreshToken);
@@ -242,7 +259,9 @@ export const refreshTokenThunk = createAsyncThunk(
       return { accessToken: newAccessToken };
     } catch (err: any) {
       if (err.message === 'Network Error' || err.code === 'ERR_NETWORK' || !err.response) {
-        return createDemoSession();
+        if (ENV.useMocks) {
+          return createDemoSession();
+        }
       }
       tokenStorage.clearTokens();
       await tokenStore.clear();

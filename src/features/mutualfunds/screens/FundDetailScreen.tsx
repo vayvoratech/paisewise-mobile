@@ -11,6 +11,7 @@ import {
   Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { RouteProp, useRoute } from '@react-navigation/native';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
 import { MutualFund } from '../mutualfunds.types';
 import { mutualFundsService } from '../mutualfunds.service';
@@ -21,12 +22,17 @@ import { AIRecommendationCard } from '../components/AIRecommendationCard';
 import { watchlistManager } from '../../watchlist/watchlistManager';
 import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
 import analyticsService from '../../../core/analyticsService';
+import { RootStackParamList } from '../../../app/navigation/types';
 
 const SIP_PRESETS = [500, 1000, 2500, 5000];
 const SIP_DATES = [1, 5, 10, 15, 20, 25];
+const SIP_PROJECTION_MONTHS = 36;
 
-export default function FundDetailScreen({ route, navigation }: { route: any; navigation: any }) {
-  const { fundId = 'hdfc-top-100', fundName } = route.params || {};
+export default function FundDetailScreen({ route, navigation }: {
+  route: RouteProp<RootStackParamList, 'FundDetail'>;
+  navigation: any;
+}) {
+  const { fundId, fundName } = route.params ?? {};
 
   const [fund, setFund] = useState<MutualFund | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,6 +46,7 @@ export default function FundDetailScreen({ route, navigation }: { route: any; na
   const [sipAmount, setSipAmount] = useState('1000');
   const [selectedDate, setSelectedDate] = useState(10);
   const [sipCreatedSuccess, setSipCreatedSuccess] = useState(false);
+  const [sipValidationError, setSipValidationError] = useState<string | null>(null);
 
   // Jargon explainer state
   const [activeJargon, setActiveJargon] = useState<string | null>(null);
@@ -48,6 +55,11 @@ export default function FundDetailScreen({ route, navigation }: { route: any; na
   useEffect(() => {
     let isMounted = true;
     (async () => {
+      if (!fundId) {
+        if (isMounted) setLoading(false);
+        return;
+      }
+
       setLoading(true);
       try {
         const data = await mutualFundsService.getFundById(fundId);
@@ -127,14 +139,28 @@ export default function FundDetailScreen({ route, navigation }: { route: any; na
       entry_source: 'fund_detail_screen',
     });
     setSipCreatedSuccess(false);
+    setSipValidationError(null);
     setSipModalVisible(true);
   };
 
   // Select SIP Amount
   const handleAmountChange = (amt: string) => {
     const prev = parseFloat(sipAmount) || 0;
-    setSipAmount(amt);
     const parsed = parseFloat(amt) || 0;
+    setSipAmount(amt);
+    const minimumSip = fund?.minSipAmount ?? 500;
+
+    if (!amt.trim() || parsed <= 0) {
+      setSipValidationError(null);
+      return;
+    }
+
+    if (parsed < minimumSip) {
+      setSipValidationError(`Minimum SIP for this fund is ₹${minimumSip}.`);
+    } else {
+      setSipValidationError(null);
+    }
+
     if (fund && parsed > 0) {
       analyticsService.sipAmountEntered({
         fund_id: fund.id,
@@ -161,7 +187,15 @@ export default function FundDetailScreen({ route, navigation }: { route: any; na
   // Confirm SIP Creation
   const handleConfirmSip = () => {
     if (!fund) return;
-    const amountNum = parseFloat(sipAmount) || 1000;
+    const amountNum = parseFloat(sipAmount) || 0;
+    const minSipAmount = fund.minSipAmount || 500;
+
+    if (amountNum < minSipAmount) {
+      setSipValidationError(`Minimum SIP for this fund is ₹${minSipAmount}.`);
+      return;
+    }
+
+    setSipValidationError(null);
     const clientSipId = `sip_${Date.now()}`;
 
     analyticsService.sipConfirmed({
@@ -191,6 +225,14 @@ export default function FundDetailScreen({ route, navigation }: { route: any; na
     }, 2200);
   };
 
+  if (!fundId) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Fund details are unavailable. Please reopen this fund from the mutual funds list.</Text>
+      </SafeAreaView>
+    );
+  }
+
   if (loading || !fund) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
@@ -219,8 +261,8 @@ export default function FundDetailScreen({ route, navigation }: { route: any; na
   // SIP Calculator projection for modal
   const parsedSip = parseFloat(sipAmount) || 1000;
   const cagrRate = fund.returns3Y / 100;
-  const monthlyRate = cagrRate / 12;
-  const totalMonths = 36;
+  const monthlyRate = Math.pow(1 + cagrRate, 1 / 12) - 1;
+  const totalMonths = SIP_PROJECTION_MONTHS;
   const totalInvested = parsedSip * totalMonths;
   const estimatedFutureValue = Math.round(
     parsedSip * ((Math.pow(1 + monthlyRate, totalMonths) - 1) / monthlyRate) * (1 + monthlyRate)
@@ -595,19 +637,27 @@ export default function FundDetailScreen({ route, navigation }: { route: any; na
                       </Text>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={styles.projectionSubLabel}>Estimated Value (+{fund.returns3Y}%)</Text>
+                      <Text style={styles.projectionSubLabel}>Illustrative Value ({fund.returns3Y}% CAGR)</Text>
                       <Text style={styles.projectionEstimated}>
                         ₹{estimatedFutureValue.toLocaleString('en-IN')}
                       </Text>
                     </View>
                   </View>
+                  <Text style={styles.projectionNote}>
+                    Estimate is based on the fund’s trailing 3Y CAGR and is not a guarantee of future returns.
+                  </Text>
                 </View>
+
+                {sipValidationError ? (
+                  <Text style={styles.validationError}>{sipValidationError}</Text>
+                ) : null}
 
                 {/* Confirm Button */}
                 <TouchableOpacity
-                  style={styles.confirmSipBtn}
+                  style={sipValidationError ? [styles.confirmSipBtn, styles.confirmSipBtnDisabled] : styles.confirmSipBtn}
                   onPress={handleConfirmSip}
                   activeOpacity={0.85}
+                  disabled={Boolean(sipValidationError)}
                 >
                   <Text style={styles.confirmSipText}>
                     Confirm SIP of ₹{parsedSip}/month 🚀
@@ -1112,6 +1162,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginTop: 2,
   },
+  projectionNote: {
+    fontSize: 10,
+    lineHeight: 14,
+    color: '#166534',
+    marginTop: spacing.xs,
+  },
+  validationError: {
+    color: '#B91C1C',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: spacing.sm,
+  },
   confirmSipBtn: {
     backgroundColor: colors.purple,
     height: 52,
@@ -1125,6 +1187,9 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
+  },
+  confirmSipBtnDisabled: {
+    opacity: 0.5,
   },
   confirmSipText: {
     ...typography.bodyBold,

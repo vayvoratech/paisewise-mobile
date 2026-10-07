@@ -80,8 +80,27 @@ export const mutualFundsService = {
    * Get funds curated by PaiseWise AI (high match score)
    */
   async getAIRecommendedFunds(): Promise<MutualFund[]> {
+    try {
+      const headers = await getHeaders();
+      const response = await axios.get(`${BASE_URL}/market/mutual-funds`, {
+        params: { recommended: 'true' },
+        headers,
+        timeout: 2500,
+      });
+
+      if (Array.isArray(response.data) && response.data.length > 0) {
+        return response.data.sort(
+          (a: MutualFund, b: MutualFund) => (b.aiRecommendation?.matchScore ?? 0) - (a.aiRecommendation?.matchScore ?? 0)
+        );
+      }
+    } catch {
+      // Fall back to local filtering when the backend does not expose a recommended flag yet.
+    }
+
     const all = await this.getFunds('all');
-    return all.filter((f) => f.aiRecommendation.isRecommended).sort((a, b) => b.aiRecommendation.matchScore - a.aiRecommendation.matchScore);
+    return all
+      .filter((f) => f.aiRecommendation.isRecommended)
+      .sort((a, b) => b.aiRecommendation.matchScore - a.aiRecommendation.matchScore);
   },
 
   /**
