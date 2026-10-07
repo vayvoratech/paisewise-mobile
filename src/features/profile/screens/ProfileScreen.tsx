@@ -11,6 +11,7 @@ import { logoutUser, setLanguage } from '../../onboarding/slices/authSlice';
 import { RootState } from '../../../app/store';
 import { apiClient } from '../../../core/api/apiClient';
 import { API_ENDPOINTS } from '../../../core/api/apiEndpoints';
+import { tokenStorage } from '../../../core/api/tokenStorage';
 
 export default function ProfileScreen() {
   const [reminders, setReminders] = useState(PROFILE.dailyReminders);
@@ -25,6 +26,19 @@ export default function ProfileScreen() {
 
   const [selectedLanguage, setSelectedLanguage] = useState(PROFILE.language || 'English');
   const [showLangModal, setShowLangModal] = useState(false);
+
+  const getActiveUserId = useCallback(() => {
+    return (
+      user?.id ||
+      user?.userId ||
+      user?._id ||
+      user?.user_id ||
+      (profileData as any)?.user_id ||
+      (profileData as any)?.userId ||
+      tokenStorage.getUserId() ||
+      '1'
+    );
+  }, [user, profileData]);
 
   const WORKING_LANGUAGES = [
     { code: 'en', name: 'English', native: 'English', flag: '🇬🇧' },
@@ -55,7 +69,7 @@ export default function ProfileScreen() {
     setRefreshingAi(true);
     try {
       const baseUrl = API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '');
-      const userId = user?.id || '1';
+      const userId = getActiveUserId();
       const res = await apiClient.post(`${baseUrl}/profile/ai-features/refresh/${userId}`);
       if (res.data) {
         setAiFeatures(res.data);
@@ -75,6 +89,8 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       const baseUrl = API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '');
+      const currentUserId = getActiveUserId();
+
       apiClient.get(`${baseUrl}/profile/me`)
         .then(res => {
           if (res.data) {
@@ -95,15 +111,14 @@ export default function ProfileScreen() {
         })
         .catch(err => console.log('Streak fetch note:', err.message));
 
-      const userId = user?.id || '1';
-      apiClient.get(`${baseUrl}/profile/ai-features/${userId}`)
+      apiClient.get(`${baseUrl}/profile/ai-features/${currentUserId}`)
         .then(res => {
           if (res.data) {
             setAiFeatures(res.data);
           }
         })
         .catch(err => console.log('AI features fetch note:', err.message));
-    }, [user?.id])
+    }, [getActiveUserId])
   );
 
   const performLogout = async () => {
