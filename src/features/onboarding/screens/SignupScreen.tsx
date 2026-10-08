@@ -120,7 +120,7 @@ export default function SignupScreen({ navigation }: Props) {
         is_new_user: true,
       });
 
-      navigation.replace('MainTabs', { screen: 'Home' });
+      navigation.replace('Onboarding');
     } catch (err: any) {
       setLoading(false);
 
@@ -128,7 +128,7 @@ export default function SignupScreen({ navigation }: Props) {
       if (errorMessage.toLowerCase().includes('network') || !err?.response) {
         // Auto fallback to demo mode so user isn't blocked by missing backend!
         dispatch(setTokens({ accessToken: 'demo-token', refreshToken: 'demo-refresh' }));
-        navigation.replace('MainTabs', { screen: 'Home' });
+        navigation.replace('Onboarding');
         return;
       }
 
@@ -148,7 +148,7 @@ export default function SignupScreen({ navigation }: Props) {
 
   const handleDemoBypass = () => {
     dispatch(setTokens({ accessToken: 'demo-token', refreshToken: 'demo-refresh' }));
-    navigation.replace('MainTabs', { screen: 'Home' });
+    navigation.replace('Onboarding');
   };
 
   return (
