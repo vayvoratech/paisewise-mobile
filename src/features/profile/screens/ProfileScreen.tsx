@@ -3,6 +3,7 @@ import React, { useState, useCallback } from 'react';
 import {
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -14,8 +15,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Card } from '../../../shared/ui/Card';
 import { colors, radius, spacing, typography } from '../../../core/theme/theme';
-import { BADGES } from '../profile.data';
-import { logoutUser, updateUserData } from '../../onboarding/slices/authSlice';
+import { BADGES, PROFILE } from '../profile.data';
+import { logoutUser, updateUserData, setLanguage } from '../../onboarding/slices/authSlice';
 import { updateProfile } from '../slices/userSlice';
 import { RootState } from '../../../app/store';
 import { apiClient } from '../../../core/api/apiClient';
@@ -26,6 +27,7 @@ import { ConfirmModal } from '../../../shared/ui/ConfirmModal';
 export default function ProfileScreen() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [reminders, setReminders] = useState(PROFILE?.dailyReminders ?? true);
   const [profileData, setProfileData] = useState<{
     name?: string;
     dayStreak?: number;
@@ -41,6 +43,34 @@ export default function ProfileScreen() {
   const user = useSelector((state: RootState) => state.auth.user);
   const currentLanguage = useSelector((state: RootState) => state.auth.language) || 'English';
 
+  const [selectedLanguage, setSelectedLanguage] = useState(PROFILE.language || 'English');
+  const [showLangModal, setShowLangModal] = useState(false);
+
+  const WORKING_LANGUAGES = [
+    { code: 'en', name: 'English', native: 'English', flag: '🇬🇧' },
+    { code: 'hi', name: 'Hindi', native: 'हिन्दी', flag: '🇮🇳' },
+    { code: 'te', name: 'Telugu', native: 'తెలుగు', flag: '🇮🇳' },
+    { code: 'ta', name: 'Tamil', native: 'தமிழ்', flag: '🇮🇳' },
+    { code: 'bn', name: 'Bengali', native: 'বাংলা', flag: '🇮🇳' },
+    { code: 'gu', name: 'Gujarati', native: 'ગુજરાતી', flag: '🇮🇳' },
+    { code: 'mr', name: 'Marathi', native: 'मराठी', flag: '🇮🇳' },
+    { code: 'kn', name: 'Kannada', native: 'ಕನ್ನಡ', flag: '🇮🇳' },
+    { code: 'ml', name: 'Malayalam', native: 'മലയാളം', flag: '🇮🇳' },
+  ];
+
+  const handleSelectLanguage = async (lang: { code: string; name: string }) => {
+    setSelectedLanguage(lang.name);
+    dispatch(setLanguage(lang.name));
+    setShowLangModal(false);
+    try {
+      const baseUrl = API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '');
+      await apiClient.patch(`${baseUrl}/profile/me/settings`, { language: lang.name, preferredLanguage: lang.name });
+      Alert.alert("Language Saved", `Your preferred language is set to ${lang.name} and saved to database.`);
+    } catch (err: any) {
+      console.warn("Failed to persist language in DB:", err.message);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       const baseUrl = API_ENDPOINTS.AUTH.REGISTER.replace('/auth/register', '');
@@ -49,6 +79,10 @@ export default function ProfileScreen() {
         .then((res) => {
           if (res.data) {
             setProfileData(res.data);
+            if (res.data.language) {
+              setSelectedLanguage(res.data.language);
+              dispatch(setLanguage(res.data.language));
+            }
           }
         })
         .catch((err) => console.log('Profile fetch note:', err.message));
@@ -212,13 +246,30 @@ export default function ProfileScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text style={styles.menuLabel}>Settings & Privacy</Text>
               <View style={styles.langPill}>
-                <Text style={styles.langPillText}>{currentLanguage}</Text>
+                <Text style={styles.langPillText}>{currentLanguage || selectedLanguage}</Text>
               </View>
             </View>
             <Text style={styles.menuSub}>6 Languages, Session Reset, DPDP Data Export</Text>
           </View>
           <Text style={styles.chevron}>›</Text>
         </TouchableOpacity>
+
+        {/* Daily Reminders Toggle */}
+        <View style={styles.menuRow}>
+          <View style={[styles.menuIconBox, { backgroundColor: '#FEF9C3' }]}>
+            <Text style={styles.menuEmoji}>🔔</Text>
+          </View>
+          <View style={styles.menuInfo}>
+            <Text style={styles.menuLabel}>Daily Reminders</Text>
+            <Text style={styles.menuSub}>Daily market & learning nudges</Text>
+          </View>
+          <Switch
+            value={reminders}
+            onValueChange={setReminders}
+            trackColor={{ true: colors.green, false: colors.border }}
+            thumbColor={colors.white}
+          />
+        </View>
 
         {/* HelpScreen Navigation Item (FAQ accordion, SEBI SCORES portal links) */}
         <TouchableOpacity
@@ -305,6 +356,48 @@ export default function ProfileScreen() {
         onSave={handleSaveProfile}
         onClose={() => setShowEditModal(false)}
       />
+
+      {/* Language Selector Modal */}
+      {showLangModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalEmoji}>🌐</Text>
+            <Text style={styles.modalTitle}>Select AI Language</Text>
+            <Text style={styles.modalDescription}>Choose a language for AI Jargon & Content explanations:</Text>
+            <View style={{ width: '100%', gap: spacing.xs, marginVertical: spacing.md }}>
+              {WORKING_LANGUAGES.map((lang) => (
+                <TouchableOpacity
+                  key={lang.code}
+                  style={[
+                    styles.langOption,
+                    selectedLanguage.toLowerCase().includes(lang.name.toLowerCase()) && styles.langOptionActive,
+                  ]}
+                  onPress={() => handleSelectLanguage(lang)}
+                >
+                  <Text style={{ fontSize: 20 }}>{lang.flag}</Text>
+                  <Text
+                    style={[
+                      styles.langOptionText,
+                      selectedLanguage.toLowerCase().includes(lang.name.toLowerCase()) && styles.langOptionTextActive,
+                    ]}
+                  >
+                    {lang.name} ({lang.native})
+                  </Text>
+                  {selectedLanguage.toLowerCase().includes(lang.name.toLowerCase()) && (
+                    <Text style={{ color: colors.purple, fontWeight: 'bold' }}>✓</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.modalCancelButton, { width: '100%' }]}
+              onPress={() => setShowLangModal(false)}
+            >
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* Web Logout Modal */}
       <ConfirmModal
@@ -532,5 +625,95 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: '#DC2626',
+  },
+  langOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  langOptionActive: {
+    borderColor: colors.purple,
+    backgroundColor: colors.indigoChip,
+  },
+  langOptionText: {
+    ...typography.bodyBold,
+    color: colors.text,
+    flex: 1,
+  },
+  langOptionTextActive: {
+    color: colors.purple,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  modalContent: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    width: '90%',
+    maxWidth: 380,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalEmoji: {
+    fontSize: 48,
+    marginBottom: spacing.sm,
+  },
+  modalTitle: {
+    ...typography.h2,
+    color: colors.text,
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  modalDescription: {
+    ...typography.body,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalCancelText: {
+    ...typography.bodyBold,
+    color: colors.textMuted,
+  },
+  modalConfirmButton: {
+    backgroundColor: '#e53e3e',
+  },
+  modalConfirmText: {
+    ...typography.bodyBold,
+    color: colors.white,
   },
 });

@@ -6,6 +6,7 @@
  * so they can present over the tab bar.
  */
 import { NavigatorScreenParams } from '@react-navigation/native';
+import { OrderReceipt } from '../../features/portfolio/order.types';
 
 export type MainTabsParamList = {
   Home: undefined;
@@ -24,7 +25,7 @@ export type RootStackParamList = {
   SetMpin: undefined;
   ResetMpin: { email: string; mode?: 'change' | 'forgot' };
   ForgotPasswordScreen: { mode?: 'password' | 'mpin' } | undefined;
-  VerifyOtp: { email: string; mode?: 'password' | 'mpin' }; 
+  VerifyOtp: { email: string; mode?: 'password' | 'mpin' };
   ResetPassword: { email: string };
   Onboarding: undefined;
   Auth: undefined;
@@ -32,8 +33,13 @@ export type RootStackParamList = {
   Lesson: { lessonId: string };
   JargonBuster: { term: string };
   Quiz: { lessonId?: string } | undefined;
-  StockDetail: { symbol: string };
-  BuySell: { symbol: string; action: 'BUY' | 'SELL'; mode?: 'buy' | 'sell' };
+  StockDetail: { symbol: string; companyName?: string };
+  BuySell: {
+    symbol: string;
+    action?: 'BUY' | 'SELL';
+    mode?: 'buy' | 'sell';
+    tradingMode?: 'PRACTICE' | 'REAL';
+  };
   TradeSuccess: {
     symbol: string;
     shares: number;
@@ -41,9 +47,17 @@ export type RootStackParamList = {
     totalPaid: number;
     xpEarned: number;
     mode?: 'buy' | 'sell';
+    isReal?: boolean;
   };
+  Orders: { initialTab?: 'OPEN' | 'COMPLETED' | 'CANCELLED' } | undefined;
+  OrderDetail: { orderId: string; order?: OrderReceipt };
+  TradeHistory: undefined;
   Community: undefined;
+  Badges: undefined;
+  Watchlist: undefined;
   SymbolSearch: undefined;
+  MutualFunds: { category?: 'all' | 'large' | 'mid' | 'debt' } | undefined;
+  FundDetail: { fundId?: string; fundName?: string } | undefined;
   SIPCalculator: { initialAmount?: number; initialYears?: number; initialRate?: number } | undefined;
   SIPSetup: { fundId?: string; defaultAmount?: number; goalId?: string; entrySource?: string } | undefined;
   Goals: undefined;

@@ -27,7 +27,10 @@ export type ServiceName = 'auth' | 'accounts' | 'payments' | 'profile';
 const extra = (Constants.expoConfig?.extra ?? {}) as Extra;
 
 export const ENV = {
-  apiGatewayUrl: extra.apiGatewayUrl ?? 'http://localhost:8080',
+  apiGatewayUrl:
+    process.env.EXPO_PUBLIC_API_BASE_URL ||
+    extra.apiGatewayUrl ||
+    'https://paisewise-backend.onrender.com',
   services: {
     auth: extra.services?.auth ?? '/auth',
     accounts: extra.services?.accounts ?? '/accounts',

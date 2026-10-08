@@ -16,6 +16,7 @@ export interface SetMpinPayload {
 }
 
 export interface LoginPayload {
+  identifier?: string;
   email?: string;
   phone?: string;
   password?: string;

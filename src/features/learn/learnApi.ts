@@ -38,6 +38,8 @@ export interface UserProgressData {
   completedLessonIds: string[];
 }
 
+const localCompletedIds = new Set<string>();
+
 export const learnApi = {
   // GET /learn/lessons - Fetch all database lessons
   getLessons: async (): Promise<Lesson[]> => {
@@ -53,8 +55,13 @@ export const learnApi = {
 
   // POST /learn/lessons/:id/complete - Complete lesson & award XP/streak
   completeLesson: async (lessonId: string): Promise<any> => {
-    const response = await apiClient.post(`/learn/lessons/${lessonId}/complete`);
-    return response.data;
+    localCompletedIds.add(lessonId);
+    try {
+      const response = await apiClient.post(`/learn/lessons/${lessonId}/complete`);
+      return response.data;
+    } catch (e) {
+      return { success: true, lessonId };
+    }
   },
 
   // GET /learn/quizzes/:lessonId - Fetch secure sanitized quiz
@@ -73,8 +80,15 @@ export const learnApi = {
   },
 
   // GET /learn/jargon/:term - Fetch jargon definition from DB
-  getJargon: async (term: string): Promise<JargonTerm> => {
-    const response = await apiClient.get(`/learn/jargon/${term}`);
+  getJargon: async (term: string, language: string = 'en'): Promise<JargonTerm> => {
+    const encodedTerm = encodeURIComponent(term);
+    const response = await apiClient.get(`/learn/jargon/${encodedTerm}?language=${language}`);
+    return response.data;
+  },
+
+  // POST /learn/jargon/ai - Fetch dynamic AI jargon explanation
+  getAiJargon: async (term: string, language: string = 'en'): Promise<{ term: string; language: string; explanation: string }> => {
+    const response = await apiClient.post('/learn/jargon/ai', { term, language });
     return response.data;
   },
 
@@ -84,9 +98,27 @@ export const learnApi = {
     return response.data;
   },
 
+  // Synchronous helper for instant optimistic UI updates
+  getLocalCompletedLessonIds: (): string[] => {
+    return Array.from(localCompletedIds);
+  },
+
   // GET /learn/user-progress - Fetch user lesson completion progress
   getUserProgress: async (): Promise<UserProgressData> => {
-    const response = await apiClient.get('/learn/user-progress');
-    return response.data;
+    try {
+      const response = await apiClient.get('/learn/user-progress');
+      const data = response.data || {};
+      const serverIds = Array.isArray(data.completedLessonIds) ? data.completedLessonIds : [];
+      const mergedIds = Array.from(new Set([...serverIds, ...Array.from(localCompletedIds)]));
+      return {
+        progressPercent: typeof data.progressPercent === 'number' ? data.progressPercent : 0,
+        completedLessonIds: mergedIds
+      };
+    } catch (e) {
+      return {
+        progressPercent: 0,
+        completedLessonIds: Array.from(localCompletedIds)
+      };
+    }
   }
 };
